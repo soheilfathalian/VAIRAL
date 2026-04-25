@@ -27,6 +27,7 @@ Gemini API ───────┘
 | [`lib/peec/types.ts`](./lib/peec/types.ts) | TypeScript types matching Peec response shapes |
 | [`lib/peec/projects.ts`](./lib/peec/projects.ts) | Live project listing + name-to-id resolution. **No hardcoded brand list — fetches dynamically every call** |
 | [`lib/llm/client.ts`](./lib/llm/client.ts) | Gemini wrapper with **3-model fallback chain** (3.1-pro-preview → 2.5-pro → 2.5-flash-lite). Critical because free-tier quota for 3.x preview models is ~25/day |
+| [`lib/tavily/client.ts`](./lib/tavily/client.ts) | Real-time web search wrapper for [Tavily](https://tavily.com). Used by `scripts/tavily-demo.ts` to enrich Shorts wedges with fresh news. Not yet wired into the main pipeline — see [`docs/tavily.md`](./docs/tavily.md) for integration plan |
 | [`lib/pipeline/insight.ts`](./lib/pipeline/insight.ts) | Headline insight generation. Code computes structured facts (ranks, leaders, pattern flags) → Gemini writes the prose. Done this way because Flash Lite can't reliably reason about reversed metrics like `position` (lower = better) |
 | [`lib/pipeline/long-form.ts`](./lib/pipeline/long-form.ts) | Track A: picks blind-spot topic, pulls fanout sub-queries, generates YouTube brief with chapters mapped 1:1 to those sub-queries |
 | [`lib/pipeline/shorts.ts`](./lib/pipeline/shorts.ts) | Track B: identifies 3 weakest-sentiment competitors and weakest topics per competitor, generates 3 Shorts scripts targeting those wedges |
@@ -35,6 +36,7 @@ Gemini API ───────┘
 | [`lib/pipeline/types.ts`](./lib/pipeline/types.ts) | The `Slate` type — single source of truth for what gets persisted |
 | [`scripts/generate-slate.ts`](./scripts/generate-slate.ts) | CLI entry. Accepts a project alias/name/id or `--list` |
 | [`scripts/explore.ts`](./scripts/explore.ts) | Smoke test for Peec connection + sanity check |
+| [`scripts/tavily-demo.ts`](./scripts/tavily-demo.ts) | Standalone demo of the Tavily freshness layer. Reads latest slate, enriches each Short wedge with fresh news. Run with `npm run tavily` |
 | [`app/page.tsx`](./app/page.tsx) | Demo UI homepage |
 | [`app/components/BrandPicker.tsx`](./app/components/BrandPicker.tsx) | Live project selector — fetches from `/api/projects` |
 | [`app/api/generate/route.ts`](./app/api/generate/route.ts) | POST endpoint that triggers slate generation server-side |
@@ -42,12 +44,14 @@ Gemini API ───────┘
 | [`app/teleprompter/page.tsx`](./app/teleprompter/page.tsx) | Teleprompter mode for filming Shorts (URL-encoded script) |
 | [`app/content-plan/page.tsx`](./app/content-plan/page.tsx) | Content planner view |
 | [`docs/peec/`](./docs/peec/) | Full Peec AI reference: concepts, metrics, MCP, REST, use cases |
+| [`docs/tavily.md`](./docs/tavily.md) | Tavily integration: use cases, demo output, full-pipeline wire-up plan |
 
 ## Stack
 
 - TypeScript + Node 22 + Next.js 15 (App Router) + React 19 + Tailwind 3
 - Gemini via `@google/genai` (NOT OpenAI/Anthropic)
 - Peec REST API via plain `fetch` (no SDK)
+- Tavily via plain `fetch` (no SDK) — optional freshness layer
 - No database — slates are JSON files in `data/slate/`
 
 ## Critical invariants — DO NOT VIOLATE
@@ -78,6 +82,9 @@ npm run slate "Project 1 - Nothing Phone"
 npm run slate attio                    # substring match works
 npm run slate or_xxxxxxxx              # raw project ID
 npm run slate -- --list                # enumerate accessible projects
+
+# Enrich the latest slate with fresh news (Tavily)
+npm run tavily                         # standalone freshness demo
 
 # Run the demo UI
 npm run dev                            # http://localhost:3000

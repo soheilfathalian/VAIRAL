@@ -40,6 +40,10 @@ Full documentation of the Peec AI tools, MCP, REST API, and concepts — assembl
 - [REST API](./docs/peec/rest-api.md) — endpoints, auth, request shapes
 - [Use Cases](./docs/peec/use-cases.md) — workflow patterns
 
+## Tavily integration (optional freshness layer)
+
+Vairal can also enrich its Shorts scripts with real-time news via [Tavily](https://tavily.com) — see [docs/tavily.md](./docs/tavily.md). Run `npm run tavily` against a generated slate to see fresh news anchors that turn generic hot takes into news-cycle riders.
+
 ## Stack
 
 - TypeScript + Node 22

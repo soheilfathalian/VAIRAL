@@ -9,6 +9,7 @@
     "start": "next start",
     "slate": "tsx scripts/generate-slate.ts",
     "explore": "tsx scripts/explore.ts",
+    "tavily": "tsx scripts/tavily-demo.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
