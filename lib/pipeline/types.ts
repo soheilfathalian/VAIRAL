@@ -58,3 +58,24 @@ export type Slate = {
   pitches: ChannelPitch[];
   replay?: ReplayValidation;
 };
+
+export type ContentItem = {
+  id: string;
+  type: 'SHORT' | 'LONG_FORM_CHAPTER' | 'LONG_FORM_FULL' | 'PITCH_PROMO';
+  title: string;
+  hook: string;
+  script: string;
+  scheduled_at: string; // ISO date
+  status: 'PLANNED' | 'RECORDED' | 'PUBLISHED';
+  metadata: {
+    topic: string;
+    hashtags: string[];
+    platforms: ('YOUTUBE' | 'TIKTOK' | 'INSTAGRAM' | 'X')[];
+  };
+};
+
+export type WeeklyContentPlan = {
+  items: ContentItem[];
+  generated_at: string;
+  brand: { id: string; name: string };
+};

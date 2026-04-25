@@ -3,6 +3,8 @@ import { join } from "node:path";
 import type { Slate } from "@/lib/pipeline/types";
 import { KNOWN_ALIASES } from "@/lib/peec/projects";
 import { BrandPicker } from "./components/BrandPicker";
+import Link from "next/link";
+
 
 async function loadSlate(): Promise<Slate | null> {
   try {
@@ -44,12 +46,20 @@ export default async function Home() {
 
 function Header() {
   return (
-    <header>
-      <p className="font-mono text-xs uppercase tracking-widest text-accent">Vairal</p>
-      <h1 className="mt-3 text-5xl font-semibold tracking-tight">Founder channel engine</h1>
-      <p className="mt-3 text-lg text-neutral-600 max-w-2xl">
-        Pick an underdog brand. Vairal pulls how AI engines talk about it (via Peec AI), then ships a week of UGC video production: long-form for citation, shorts for reach, channel pitches for compounding.
-      </p>
+    <header className="flex justify-between items-end">
+      <div>
+        <p className="font-mono text-xs uppercase tracking-widest text-accent">Vairal</p>
+        <h1 className="mt-3 text-5xl font-semibold tracking-tight">Founder channel engine</h1>
+        <p className="mt-3 text-lg text-neutral-600 max-w-2xl">
+          Pick an underdog brand. Vairal pulls how AI engines talk about it (via Peec AI), then ships a week of UGC video production: long-form for citation, shorts for reach, channel pitches for compounding.
+        </p>
+      </div>
+      <Link href="/content-plan" className="mb-1 font-mono text-xs uppercase tracking-widest text-neutral-400 hover:text-accent transition-colors flex items-center gap-2">
+        View Content Plan
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </Link>
     </header>
   );
 }
@@ -149,6 +159,18 @@ function Shorts({ slate }: { slate: Slate }) {
             <p className="mt-3 text-sm text-neutral-700">{s.payoff}</p>
             <div className="mt-4 flex flex-wrap gap-1">
               {s.hashtags.map((h, j) => <span key={j} className="text-xs text-accent">{h}</span>)}
+            </div>
+            
+            <div className="mt-auto pt-6">
+              <Link 
+                href={`/teleprompter?script=${encodeURIComponent(`${s.hook} ${s.claim} ${s.payoff}`)}`}
+                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink bg-paper border border-neutral-200 px-4 py-2 rounded-full hover:bg-neutral-100 transition-colors w-full justify-center"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Record Video
+              </Link>
             </div>
           </article>
         ))}
