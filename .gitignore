@@ -1,0 +1,13 @@
+.env
+.env.local
+.claude/
+node_modules/
+.next/
+dist/
+.DS_Store
+data/cache/
+data/slate/
+data/explore/
+*.log
+*.tsbuildinfo
+next-env.d.ts
