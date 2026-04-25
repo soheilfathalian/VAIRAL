@@ -53,7 +53,6 @@ export default async function Home() {
       ) : (
         <>
           <Insight slate={slate} />
-          <LongForm slate={slate} />
           <Shorts slate={slate} />
           <Pitches slate={slate} />
           <Footer slate={slate} />
@@ -82,59 +81,6 @@ function Insight({ slate }: { slate: Slate }) {
   );
 }
 
-function LongForm({ slate }: { slate: Slate }) {
-  const lf = slate.long_form;
-  return (
-    <section className="mt-10">
-      <SectionTitle label="Track A · Long-form YouTube brief" topic={lf.topic} />
-      <div className="mt-4 rounded-2xl border border-neutral-200 p-8 bg-white">
-        <h3 className="text-2xl font-semibold">{lf.title}</h3>
-        {lf.hook && (
-          <p className="mt-4 text-neutral-700 italic border-l-2 border-accent pl-4">&ldquo;{lf.hook}&rdquo;</p>
-        )}
-        {lf.description && <p className="mt-4 text-neutral-700 leading-relaxed">{lf.description}</p>}
-        {lf.chapters.length > 0 && (
-          <div className="mt-6">
-            <p className="font-mono text-xs uppercase tracking-widest text-neutral-500">Chapters (mapped to AI sub-queries)</p>
-            <ol className="mt-3 space-y-3">
-              {lf.chapters.map((c, i) => (
-                <li key={i} className="border-l-2 border-neutral-200 pl-4">
-                  <p className="font-mono text-sm text-neutral-500">{c.timestamp}</p>
-                  <p className="font-medium">{c.title}</p>
-                  <p className="text-xs text-neutral-500 mt-1">↳ from sub-query: <span className="font-mono">{c.sub_query_source}</span></p>
-                  <ul className="mt-2 text-sm text-neutral-700 list-disc list-inside">
-                    {c.talking_points.map((t, j) => <li key={j}>{t}</li>)}
-                  </ul>
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
-        {lf.b_roll.length > 0 && (
-          <div className="mt-6">
-            <p className="font-mono text-xs uppercase tracking-widest text-neutral-500">B-roll</p>
-            <ul className="mt-2 text-sm text-neutral-700 list-disc list-inside">
-              {lf.b_roll.map((b, i) => <li key={i}>{b}</li>)}
-            </ul>
-          </div>
-        )}
-        {lf.citation_targets.length > 0 && (
-          <div className="mt-6">
-            <p className="font-mono text-xs uppercase tracking-widest text-neutral-500">Existing cited videos in this space</p>
-            <ul className="mt-2 text-sm space-y-1">
-              {lf.citation_targets.map((c) => (
-                <li key={c.url}>
-                  <a href={c.url} target="_blank" rel="noreferrer" className="text-accent underline underline-offset-4">{c.channel_title}</a>
-                  <span className="text-neutral-500 ml-2">— {c.why}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
 
 function Shorts({ slate }: { slate: Slate }) {
   if (slate.shorts.length === 0) {

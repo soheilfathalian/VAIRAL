@@ -94,13 +94,14 @@ export async function buildShorts(args: Args): Promise<ShortScript[]> {
 }
 
 function shortsSystem(brand: string): string {
-  return `You are a short-form video writer for ${brand}, an underdog consumer brand. Generate exactly 3 short-form video scripts (TikTok / Reels / Shorts), each 30-45 seconds.
+  return `You are a short-form video writer for ${brand}, an underdog consumer brand. Generate exactly 6 short-form video scripts (TikTok / Reels / Shorts), each 30-45 seconds.
 
-Each script targets a different "wedge" — a topic where a major competitor has weak sentiment in AI search results, where ${brand} can present a contrarian, honest, fan-perspective take.
+I will give you 3 "wedges" — topics where a major competitor has weak sentiment in AI search results.
+You MUST write exactly 2 distinct scripts for EACH wedge, for a total of 6 scripts. Each script should present a contrarian, honest, fan-perspective take that exploits the competitor's weakness.
 
 Tone: enthusiast / observer voice, not corporate. The person delivering this is a real fan or community member, not a marketer. They speak with conviction and specifics.
 
-Output must be a JSON array of exactly 3 objects, each matching:
+Output must be a JSON array of exactly 6 objects, each matching:
 {
   "topic": "string — the topic this short addresses",
   "competitor_wedge": { "name": "competitor brand", "sentiment": number, "weak_topic": "the topic" },

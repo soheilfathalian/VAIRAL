@@ -35,6 +35,12 @@ function PlatformIcon({ platform }: { platform: Platform }) {
           <path d="M18.2 2h3.4l-7.4 8.5L23 22h-6.8l-5.3-7-6.1 7H1.4l7.9-9L1 2h7l4.8 6.4L18.2 2zm-1.2 18h1.9L7.1 4H5.1l11.9 16z" />
         </svg>
       );
+    case "REDDIT":
+      return (
+        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="#FF4500">
+          <path d="M22 11.5c0-1.4-1.1-2.5-2.5-2.5-.7 0-1.3.3-1.7.7-1.5-1.1-3.6-1.8-5.8-1.9l1-4.7 3.2.7c0 1.1.9 2 2 2 1.1 0 2-.9 2-2s-.9-2-2-2c-.8 0-1.5.4-1.8 1l-3.6-.8c-.1 0-.3 0-.4.1-.1.1-.1.3-.2.4l-1.1 5.3c-2.3.1-4.3.8-5.8 1.9-.4-.4-1-.7-1.7-.7-1.4 0-2.5 1.1-2.5 2.5 0 1 .5 1.8 1.3 2.2-.1.3-.1.6-.1 1 0 3.6 4.3 6.5 9.5 6.5s9.5-2.9 9.5-6.5c0-.3 0-.6-.1-1 .8-.4 1.3-1.2 1.3-2.2zM12 19.5c-2.4 0-4.4-1.2-4.9-2.8h9.8c-.5 1.6-2.5 2.8-4.9 2.8zm-2.8-5.4c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5zm5.6 0c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5z" />
+        </svg>
+      );
   }
 }
 
@@ -115,9 +121,9 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
 
   const typeLabel: Record<ContentItem["type"], string> = {
     SHORT: "Short",
-    LONG_FORM_CHAPTER: "Chapter",
-    LONG_FORM_FULL: "Long-form",
     PITCH_PROMO: "Pitch",
+    REMIX: "Remix",
+    REDDIT_POST: "Reddit AMA",
   };
 
   const scheduled = new Date(item.scheduled_at);
@@ -235,9 +241,9 @@ export function ContentCard({ item }: { item: ContentItem }) {
 
   const typeColors: Record<ContentItem["type"], string> = {
     SHORT: "bg-indigo-50 text-indigo-600",
-    LONG_FORM_CHAPTER: "bg-amber-50 text-amber-600",
-    LONG_FORM_FULL: "bg-emerald-50 text-emerald-600",
     PITCH_PROMO: "bg-neutral-50 text-neutral-400",
+    REMIX: "bg-fuchsia-50 text-fuchsia-600",
+    REDDIT_POST: "bg-orange-50 text-orange-600",
   };
 
   return (
@@ -290,6 +296,17 @@ export function ContentCard({ item }: { item: ContentItem }) {
             <PlatformIcon key={p} platform={p} />
           ))}
         </div>
+
+        {item.metadata.is_low_sentiment && (
+          <div className="mt-3">
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-red-500 flex items-center gap-1.5">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Combat Low Sentiment
+            </span>
+          </div>
+        )}
 
         {!done && (
           <div className="mt-auto pt-4 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">

@@ -48,6 +48,14 @@ export type ShortScript = {
   fresh_news_anchor?: { title: string; url: string; snippet: string; date: string } | null;
 };
 
+export type RemixScript = {
+  source_url: string;
+  hook: string;
+  remix_angle: string;
+  script: string;
+  format: string;
+};
+
 export type ChannelPitch = {
   channel_title: string;
   channel_url: string;
@@ -55,6 +63,14 @@ export type ChannelPitch = {
   pitch_angle: string;
   email_subject: string;
   email_body: string;
+};
+
+export type QnaCluster = {
+  items: {
+    reddit_post: { title: string; body: string };
+    short_react_1: { hook: string; script: string };
+    short_react_2: { hook: string; script: string };
+  };
 };
 
 export type ReplayValidation = {
@@ -72,16 +88,18 @@ export type Slate = {
   project_id: string;
   date_range: { start_date: string; end_date: string };
   headline_insight: Insight;
-  long_form: LongFormBrief;
   shorts: ShortScript[];
+  remixes: RemixScript[];
   pitches: ChannelPitch[];
   gap_analysis: GapAnalysis;
+  qna_clusters: QnaCluster[];
+  low_sentiment_shorts: ShortScript[];
   replay?: ReplayValidation;
 };
 
 export type ContentItem = {
   id: string;
-  type: 'SHORT' | 'LONG_FORM_CHAPTER' | 'LONG_FORM_FULL' | 'PITCH_PROMO';
+  type: 'SHORT' | 'PITCH_PROMO' | 'REMIX' | 'REDDIT_POST';
   title: string;
   hook: string;
   script: string;
@@ -90,7 +108,9 @@ export type ContentItem = {
   metadata: {
     topic: string;
     hashtags: string[];
-    platforms: ('YOUTUBE' | 'TIKTOK' | 'INSTAGRAM' | 'X')[];
+    platforms: Array<'YOUTUBE' | 'TIKTOK' | 'INSTAGRAM' | 'X' | 'REDDIT'>;
+    is_urgent?: boolean;
+    is_low_sentiment?: boolean;
   };
 };
 
