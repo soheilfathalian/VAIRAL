@@ -228,15 +228,19 @@ function Teleprompter() {
 
       {/* Main Display Area */}
       <div className="relative flex-1 cursor-move select-none" onMouseDown={onMouseDown}>
-         {/* Focus guides — pinned to viewport center so they always align with the focus letter */}
-         <div className={`pointer-events-none fixed top-0 bottom-0 flex flex-col justify-between items-center py-[10vh] transition-opacity ${isDragging ? 'opacity-40' : 'opacity-20'}`} style={{ left: '50vw', transform: 'translateX(-50%)' }}>
+         {/* Focus guides — pinned to horizontalPos so they align with the shifted text */}
+         <div className={`pointer-events-none fixed top-0 bottom-0 flex flex-col justify-between items-center py-[10vh] transition-opacity ${isDragging ? 'opacity-40' : 'opacity-20'}`} style={{ left: `${horizontalPos}%`, transform: 'translateX(-50%)' }}>
              <div className="w-1 h-12 bg-accent rounded-full shadow-[0_0_15px_rgba(99,102,241,0.2)]" />
              <div className="w-1 h-12 bg-accent rounded-full shadow-[0_0_15px_rgba(99,102,241,0.2)]" />
          </div>
 
          <div
-            className={`absolute left-0 right-0 transition-all ${isDragging ? 'duration-0' : 'duration-300 ease-out'}`}
-            style={{ top: `${verticalPos}%` }}
+            className={`absolute transition-all ${isDragging ? 'duration-0' : 'duration-300 ease-out'}`}
+            style={{ 
+              top: `${verticalPos}%`,
+              left: `calc(${horizontalPos}% - 50vw)`,
+              width: '100vw'
+            }}
          >
              {/* Spritz Word Display — CSS Grid 1fr / auto / 1fr
                  The auto column (focus letter) is at exactly 50% of 100vw.
