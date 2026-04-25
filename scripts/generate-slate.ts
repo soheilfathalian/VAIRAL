@@ -5,6 +5,7 @@ import { peec, dateRange } from "../lib/peec/client";
 import { resolveProject, listProjects } from "../lib/peec/projects";
 import { hasLLM } from "../lib/llm/client";
 import { generateSlate } from "../lib/pipeline/slate";
+import { computeGapAnalysis } from "../lib/pipeline/gap-analysis";
 import type { Slate } from "../lib/pipeline/types";
 
 const arg = process.argv[2];
@@ -27,11 +28,12 @@ const OUT_DIR = "data/slate";
 async function dataOnlySlate(projectId: string): Promise<Slate> {
   console.log("[vairal] No GEMINI_API_KEY — running data-only mode\n");
   const range = dateRange(30);
-  const [brands, topics, brandReport, urlReport] = await Promise.all([
+  const [brands, topics, brandReport, urlReport, domainReport] = await Promise.all([
     peec.listBrands(projectId),
     peec.listTopics(projectId),
     peec.brandReport(projectId, { ...range, limit: 50 }),
     peec.urlReport(projectId, { ...range, limit: 200 }),
+    peec.domainReport(projectId, { ...range, limit: 30 }),
   ]);
   const own = brands.find((b) => b.is_own) ?? brands[0];
   if (!own) throw new Error(`Project ${projectId} has no brands configured`);
@@ -47,23 +49,6 @@ async function dataOnlySlate(projectId: string): Promise<Slate> {
       subhead: `${brandReport.length} brand report rows, ${topics.length} topics, ${yt.length} YouTube channels in source data.`,
       evidence: [],
     },
-    long_form: {
-      topic: topics[0]?.name ?? "TBD",
-      topic_id: topics[0]?.id ?? "",
-      title: "[Awaiting GEMINI_API_KEY for slate generation]",
-      hook: "",
-      description: "",
-      chapters: [],
-      b_roll: [],
-      thumbnail_concept: "",
-      tags: [],
-      target_prompts: [],
-      citation_targets: yt.slice(0, 5).map((u) => ({
-        url: u.url,
-        channel_title: u.channel_title,
-        why: `${u.retrievals} retrievals, ${u.citation_count} citations`,
-      })),
-    },
     shorts: [],
     pitches: yt.slice(0, 5).map((u) => ({
       channel_title: u.channel_title!,
@@ -73,6 +58,10 @@ async function dataOnlySlate(projectId: string): Promise<Slate> {
       email_subject: "",
       email_body: "",
     })),
+    remixes: [],
+    qna_clusters: [],
+    low_sentiment_shorts: [],
+    gap_analysis: computeGapAnalysis(domainReport, own, brands),
   };
 }
 
@@ -88,8 +77,9 @@ await writeFile(latest, JSON.stringify(slate, null, 2));
 
 console.log(`\n[vairal] ✓ Generated for ${slate.brand.name}`);
 console.log(`[vairal]   headline:  ${slate.headline_insight.headline}`);
-console.log(`[vairal]   long-form: ${slate.long_form.title}`);
 console.log(`[vairal]   shorts:    ${slate.shorts.length}`);
+console.log(`[vairal]   remixes:   ${slate.remixes.length}`);
 console.log(`[vairal]   pitches:   ${slate.pitches.length}`);
+console.log(`[vairal]   gaps:      ${slate.gap_analysis.gaps.length} source gaps found`);
 console.log(`[vairal]   saved:     ${path}`);
 console.log(`[vairal]   latest:    ${latest}\n`);

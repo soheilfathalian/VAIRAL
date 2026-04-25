@@ -1,18 +1,22 @@
 import { peec, dateRange } from "../peec/client";
 import { buildInsight } from "./insight";
-import { buildLongFormBrief } from "./long-form";
 import { buildShorts } from "./shorts";
 import { buildPitches } from "./pitches";
+import { buildRemixes } from "./remixes";
+import { buildQnaClusters } from "./qna-cluster";
+import { buildLowSentimentShorts } from "./low-sentiment-shorts";
+import { computeGapAnalysis } from "./gap-analysis";
 import type { Slate } from "./types";
 
 export async function generateSlate(projectId: string, days = 30): Promise<Slate> {
   const range = dateRange(days);
 
-  const [brands, topics, brandReport, domainReport] = await Promise.all([
+  const [brands, topics, brandReport, domainReport, urlReport] = await Promise.all([
     peec.listBrands(projectId),
     peec.listTopics(projectId),
     peec.brandReport(projectId, { ...range, limit: 50 }),
     peec.domainReport(projectId, { ...range, limit: 30 }),
+    peec.urlReport(projectId, { ...range, limit: 100 }),
   ]);
 
   if (brandReport.length === 0) {
@@ -28,25 +32,37 @@ export async function generateSlate(projectId: string, days = 30): Promise<Slate
     console.warn(`[slate] No is_own brand in project ${projectId}, falling back to first brand: ${own.name}`);
   }
 
+  // Pure computation — no extra API call, domain report already fetched above
+  const gapAnalysis = computeGapAnalysis(domainReport, own, brands);
+
   console.log(`\n[slate] Brand: ${own.name}`);
   console.log(`[slate] Topics: ${topics.length} · Brands tracked: ${brands.length} · Brand report rows: ${brandReport.length}`);
+  console.log(`[slate] Source gaps computed: ${gapAnalysis.total_gaps_found} gaps found, top ${gapAnalysis.gaps.length} surfaced`);
   console.log(`[slate] Generating insight + tracks sequentially (Gemini free-tier RPM)...\n`);
 
-  console.log(`[slate]   1/4 insight...`);
+  console.log(`[slate]   1/5 insight...`);
   const insight = await buildInsight({ brandName: own.name, brandReport, domainReport, range });
   console.log(`[slate]   ✓ ${insight.headline}`);
 
-  console.log(`[slate]   2/4 long-form brief...`);
-  const longForm = await buildLongFormBrief({ projectId, ownBrandName: own.name, topics, brandReport, range });
-  console.log(`[slate]   ✓ ${longForm.title}`);
-
-  console.log(`[slate]   3/4 shorts...`);
+  console.log(`[slate]   2/5 shorts...`);
   const shorts = await buildShorts({ projectId, ownBrandName: own.name, topics, brandReport, range });
   console.log(`[slate]   ✓ ${shorts.length} shorts scripts`);
 
-  console.log(`[slate]   4/4 channel pitches...`);
+  console.log(`[slate]   3/5 channel pitches...`);
   const pitches = await buildPitches({ projectId, ownBrandName: own.name, range });
   console.log(`[slate]   ✓ ${pitches.length} pitches`);
+
+  console.log(`[slate]   4/5 competitor remixes...`);
+  const remixes = await buildRemixes({ projectId, ownBrand: own, allBrands: brands, urlReport });
+  console.log(`[slate]   ✓ ${remixes.length} remixes generated`);
+
+  console.log(`[slate]   5/5 Q&A clusters and low sentiment shorts...`);
+  const [qna_clusters, low_sentiment_shorts] = await Promise.all([
+    buildQnaClusters({ ownBrandName: own.name }),
+    buildLowSentimentShorts({ projectId, ownBrandName: own.name, topics, range }),
+  ]);
+  console.log(`[slate]   ✓ ${qna_clusters.length} Q&A cluster(s) generated`);
+  console.log(`[slate]   ✓ ${low_sentiment_shorts.length} combat shorts generated`);
 
   return {
     generated_at: new Date().toISOString(),
@@ -54,8 +70,11 @@ export async function generateSlate(projectId: string, days = 30): Promise<Slate
     project_id: projectId,
     date_range: range,
     headline_insight: insight,
-    long_form: longForm,
     shorts,
+    remixes,
     pitches,
+    gap_analysis: gapAnalysis,
+    qna_clusters,
+    low_sentiment_shorts,
   };
 }

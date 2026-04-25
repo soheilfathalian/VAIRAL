@@ -2,80 +2,187 @@ import type { Slate, WeeklyContentPlan, ContentItem } from "./types";
 
 /**
  * Smartly distributes scripts from a Slate into a 7-day calendar.
- * Targets 3 videos per day with specific time-slots.
+ * Utilizes gap analysis, Tavily fresh news, and competitor remixes
+ * to build a prioritized, non-repeating schedule.
  */
 export function generateSmartPlan(slate: Slate): WeeklyContentPlan {
   const items: ContentItem[] = [];
   const start = new Date();
-  
-  // 1. Convert Slate to raw pool of content potential
-  const pool: Omit<ContentItem, 'id' | 'scheduled_at' | 'status'>[] = [];
-  
-  // Add Shorts (High priority for reach)
-  slate.shorts.forEach(s => pool.push({
-    type: 'SHORT',
-    title: s.topic,
+
+  // 1. Prepare Content Pools
+
+  // A. Shorts (check for Tavily news urgency)
+  const shortItems = slate.shorts.map((s) => {
+    const isNews = !!s.fresh_news_anchor;
+    return {
+      type: "SHORT" as const,
+      title: isNews ? `News Hijack: ${s.fresh_news_anchor!.title}` : s.topic,
+      hook: s.hook,
+      script: isNews
+        ? `[News Anchor: ${s.fresh_news_anchor!.snippet}]\n\n${s.hook} ${s.claim} ${s.payoff}`
+        : `${s.hook} ${s.claim} ${s.payoff}`,
+      metadata: {
+        topic: s.topic,
+        hashtags: s.hashtags,
+        platforms: ["YOUTUBE", "TIKTOK", "INSTAGRAM"] as ("YOUTUBE" | "TIKTOK" | "INSTAGRAM" | "X")[],
+        is_urgent: isNews,
+      },
+    };
+  });
+
+  // B. Gap Analysis Actions (surfacing missing domains as actionable pitch items)
+  const gapItems = (slate.gap_analysis?.gaps || []).map((gap) => ({
+    type: "PITCH_PROMO" as const,
+    title: `Gap: ${gap.domain}`,
+    hook: `Recommended action: ${gap.recommended_action}`,
+    script: `Format: ${gap.content_format}\nCompetitors present: ${gap.competitors_present.join(
+      ", "
+    )}\n\nAction: Execute distribution play on ${gap.domain}.`,
+    metadata: {
+      topic: "Distribution",
+      hashtags: [gap.classification],
+      platforms: [] as ("YOUTUBE" | "TIKTOK" | "INSTAGRAM" | "X")[],
+    },
+  }));
+
+  // C. Competitor Remixes (counter-narrative content)
+  const remixItems = (slate.remixes || []).map((r) => ({
+    type: "REMIX" as const,
+    title: `Remix: ${r.remix_angle}`,
+    hook: r.hook,
+    script: r.script,
+    metadata: {
+      topic: "Counter-narrative",
+      hashtags: [],
+      platforms: ["YOUTUBE", "TIKTOK", "X"] as ("YOUTUBE" | "TIKTOK" | "INSTAGRAM" | "X")[],
+    },
+  }));
+
+  // D. Low Sentiment Shorts
+  const lowSentimentItems = (slate.low_sentiment_shorts || []).map((s) => ({
+    type: "SHORT" as const,
+    title: `Combat: ${s.topic}`,
     hook: s.hook,
     script: `${s.hook} ${s.claim} ${s.payoff}`,
     metadata: {
-        topic: s.topic,
-        hashtags: s.hashtags,
-        platforms: ['YOUTUBE', 'TIKTOK', 'INSTAGRAM']
-    }
+      topic: s.topic,
+      hashtags: s.hashtags,
+      platforms: ["YOUTUBE", "TIKTOK", "INSTAGRAM"] as ("YOUTUBE" | "TIKTOK" | "INSTAGRAM" | "X")[],
+      is_urgent: false,
+      is_low_sentiment: true,
+    },
   }));
 
-  // Add Chapters (Educational/Authority content)
-  slate.long_form.chapters.forEach(c => pool.push({
-    type: 'LONG_FORM_CHAPTER',
-    title: c.title,
-    hook: c.title,
-    script: c.talking_points.join('. '),
-    metadata: {
-        topic: slate.long_form.topic,
-        hashtags: slate.long_form.tags,
-        platforms: ['YOUTUBE']
-    }
-  }));
+  // 2. Build prioritized queues
+  // We want to guarantee at least one Short per day.
+  const shortsQueue = [
+    ...lowSentimentItems,
+    ...shortItems.filter((s) => s.metadata.is_urgent),
+    ...shortItems.filter((s) => !s.metadata.is_urgent),
+  ];
+  const otherQueue = [...gapItems, ...remixItems];
 
-  // Add Full Long Form (Deep authority)
-  pool.push({
-    type: 'LONG_FORM_FULL',
-    title: slate.long_form.title,
-    hook: slate.long_form.hook,
-    script: `${slate.long_form.hook}. ${slate.long_form.description}`,
-    metadata: {
-        topic: slate.long_form.topic,
-        hashtags: slate.long_form.tags,
-        platforms: ['YOUTUBE']
+  // Find Thursday (0 = Sunday, 1 = Monday, ..., 4 = Thursday)
+  let thursdayOffset = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    if (d.getDay() === 4) {
+      thursdayOffset = i;
+      break;
     }
-  });
+  }
 
-  // 2. Distribute 3 per day for 7 days (21 total slots)
-  // Logic: Cycle through the pool, prioritizing variety
+  const scheduledDays = new Set<number>();
+
+  // A. Lock the Q&A Cluster to Thursday (if exists)
+  if (slate.qna_clusters && slate.qna_clusters.length > 0) {
+    const cluster = slate.qna_clusters[0];
+    const dStart = new Date(start);
+    dStart.setDate(dStart.getDate() + thursdayOffset);
+
+    // 9:00 AM - The Reddit Seed
+    items.push({
+      id: `item_cluster_0`,
+      type: "REDDIT_POST" as const,
+      title: `CEO Q&A`,
+      hook: cluster.items.reddit_post.title,
+      script: cluster.items.reddit_post.body,
+      metadata: { topic: "Q&A", hashtags: ["AMA"], platforms: ["REDDIT"] as any[], is_urgent: false },
+      scheduled_at: (() => {
+        const d = new Date(dStart);
+        d.setHours(9, 0, 0, 0);
+        return d.toISOString();
+      })(),
+      status: "PLANNED",
+    });
+
+    // 13:00 PM - The Initial React
+    items.push({
+      id: `item_cluster_1`,
+      type: "SHORT" as const,
+      title: `React: Q&A 1`,
+      hook: cluster.items.short_react_1.hook,
+      script: `${cluster.items.short_react_1.hook} ${cluster.items.short_react_1.script}`,
+      metadata: { topic: "Q&A", hashtags: ["React"], platforms: ["YOUTUBE", "TIKTOK", "INSTAGRAM"] as any[], is_urgent: false },
+      scheduled_at: (() => {
+        const d = new Date(dStart);
+        d.setHours(13, 0, 0, 0);
+        return d.toISOString();
+      })(),
+      status: "PLANNED",
+    });
+
+    // 19:00 PM - The Second React
+    items.push({
+      id: `item_cluster_2`,
+      type: "SHORT" as const,
+      title: `React: Q&A 2`,
+      hook: cluster.items.short_react_2.hook,
+      script: `${cluster.items.short_react_2.hook} ${cluster.items.short_react_2.script}`,
+      metadata: { topic: "Q&A", hashtags: ["React"], platforms: ["YOUTUBE", "TIKTOK", "INSTAGRAM"] as any[], is_urgent: false },
+      scheduled_at: (() => {
+        const d = new Date(dStart);
+        d.setHours(19, 0, 0, 0);
+        return d.toISOString();
+      })(),
+      status: "PLANNED",
+    });
+
+    scheduledDays.add(thursdayOffset);
+  }
+
+  // B. Distribute remaining days
+  // We guarantee 1 Short in the morning, and 1 Gap/Remix in the afternoon.
   for (let d = 0; d < 7; d++) {
-    for (let s = 0; s < 3; s++) {
-      const poolIdx = (d * 3 + s) % (pool.length || 1);
-      const baseItem = pool[poolIdx] || {
-          type: 'SHORT' as const,
-          title: 'Topic Refinement',
-          hook: 'Ready for deep dive',
-          script: 'Focus on recent brand sentiment shifts.',
-          metadata: { topic: 'General', hashtags: [], platforms: ['X'] }
-      };
+    if (scheduledDays.has(d)) continue;
 
-      const scheduledDate = new Date(start);
-      scheduledDate.setDate(start.getDate() + d);
-      
-      // Fixed time-slots for optimal engagement
-      // 09:00 (Morning scroll), 13:00 (Lunch), 19:00 (Evening peak)
-      const hours = [9, 13, 19];
-      scheduledDate.setHours(hours[s], 0, 0, 0);
+    const dStart = new Date(start);
+    dStart.setDate(dStart.getDate() + d);
 
+    // Morning Slot (9:00) -> Pull from shorts first
+    const morningItem = shortsQueue.shift() || otherQueue.shift();
+    if (morningItem) {
+      const d1 = new Date(dStart);
+      d1.setHours(9, 0, 0, 0);
       items.push({
-        ...baseItem,
-        id: `item_${d}_${s}`,
-        scheduled_at: scheduledDate.toISOString(),
-        status: 'PLANNED'
+        ...morningItem,
+        id: `item_${d}_0`,
+        scheduled_at: d1.toISOString(),
+        status: "PLANNED",
+      });
+    }
+
+    // Afternoon Slot (16:00) -> Pull from Gaps/Remixes first
+    const afternoonItem = otherQueue.shift() || shortsQueue.shift();
+    if (afternoonItem) {
+      const d2 = new Date(dStart);
+      d2.setHours(16, 0, 0, 0);
+      items.push({
+        ...afternoonItem,
+        id: `item_${d}_1`,
+        scheduled_at: d2.toISOString(),
+        status: "PLANNED",
       });
     }
   }
@@ -83,6 +190,6 @@ export function generateSmartPlan(slate: Slate): WeeklyContentPlan {
   return {
     items,
     generated_at: new Date().toISOString(),
-    brand: slate.brand
+    brand: slate.brand,
   };
 }
