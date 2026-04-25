@@ -43,7 +43,7 @@ export function BrandPicker({ currentBrand }: { currentBrand: string }) {
     }
   }
 
-  if (projects === null) {
+  if (!projects) {
     return (
       <div className="mt-8 text-sm text-neutral-500 font-mono">Loading projects from Peec…</div>
     );
