@@ -22,6 +22,7 @@ function Teleprompter() {
   const dragStartX = useRef(0);
   const initialVerticalPos = useRef(0);
   const initialHorizontalPos = useRef(0);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Load settings
   useEffect(() => {
@@ -37,24 +38,42 @@ function Teleprompter() {
         console.error("Failed to load prompter settings", e);
       }
     }
+    setIsLoaded(true);
   }, []);
 
-  // Save settings
+  // Save settings (only after initial load)
   useEffect(() => {
+    if (!isLoaded) return;
+    
     localStorage.setItem("vairal-teleprompter-settings", JSON.stringify({
       wpm,
       vPos: verticalPos,
       hPos: horizontalPos,
       fSize: fontSize
     }));
-  }, [wpm, verticalPos, horizontalPos, fontSize]);
+  }, [isLoaded, wpm, verticalPos, horizontalPos, fontSize]);
+
+  // Natural-reading delay multipliers
+  const getWordDelay = (word: string, baseMs: number): number => {
+    let multiplier = 1;
+
+    // Sentence-end pause (full stop, !, ?)
+    if (/[.!?]["')?]*$/.test(word)) multiplier *= 1.8;
+
+    // Long-word buffer: words > 8 chars get extra time proportional to extra length
+    const extraChars = Math.max(0, word.replace(/[^a-zA-Z]/g, "").length - 8);
+    if (extraChars > 0) multiplier *= 1 + Math.min(extraChars * 0.08, 1); // cap at 2×
+
+    return baseMs * multiplier;
+  };
 
   useEffect(() => {
     if (isPlaying && currentIndex < words.length) {
       const msPerWord = (60 / wpm) * 1000;
+      const delay = getWordDelay(words[currentIndex], msPerWord);
       timerRef.current = setTimeout(() => {
         setCurrentIndex((prev) => prev + 1);
-      }, msPerWord);
+      }, delay);
     } else if (currentIndex >= words.length) {
       setIsPlaying(false);
     }
@@ -63,6 +82,18 @@ function Teleprompter() {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [isPlaying, currentIndex, words.length, wpm]);
+
+  // Keyboard shortcut: Spacebar to toggle Play/Pause
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        e.preventDefault(); // prevent page scroll
+        setIsPlaying((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Handle Dragging
   useEffect(() => {
@@ -110,9 +141,11 @@ function Teleprompter() {
 
   const currentWord = words[currentIndex] || "";
   
-  // Spritz-like focus point calculation
-  const getFocusIndex = (word: string) => {
-    const len = word.length;
+  // Spritz focus-letter: always sits at the same horizontal anchor.
+  // The focus index follows the Spritz formula (optimal recognition point).
+  const getFocusIndex = (word: string): number => {
+    // Strip trailing punctuation for length measurement
+    const len = word.replace(/[^a-zA-Z0-9]/g, "").length;
     if (len <= 1) return 0;
     if (len <= 5) return 1;
     if (len <= 9) return 2;
@@ -122,8 +155,8 @@ function Teleprompter() {
 
   const focusIndex = getFocusIndex(currentWord);
   const before = currentWord.slice(0, focusIndex);
-  const focus = currentWord.slice(focusIndex, focusIndex + 1);
-  const after = currentWord.slice(focusIndex + 1);
+  const focus  = currentWord.slice(focusIndex, focusIndex + 1);
+  const after  = currentWord.slice(focusIndex + 1);
 
   return (
     <div className={`fixed inset-0 bg-paper text-ink flex flex-col font-sans overflow-hidden transition-colors duration-300 ${isDragging ? 'bg-neutral-100' : 'bg-paper'}`}>
@@ -211,33 +244,37 @@ function Teleprompter() {
 
       {/* Main Display Area */}
       <div className="relative flex-1 cursor-move select-none" onMouseDown={onMouseDown}>
-         <div 
-            className={`absolute flex justify-center items-center transition-all ${isDragging ? 'duration-0' : 'duration-500 ease-out'}`}
+         {/* Focus guides — pinned to horizontalPos so they align with the shifted text */}
+         <div className={`pointer-events-none fixed top-0 bottom-0 flex flex-col justify-between items-center py-[10vh] transition-opacity ${isDragging ? 'opacity-40' : 'opacity-20'}`} style={{ left: `${horizontalPos}%`, transform: 'translateX(-50%)' }}>
+             <div className="w-1 h-12 bg-accent rounded-full shadow-[0_0_15px_rgba(99,102,241,0.2)]" />
+             <div className="w-1 h-12 bg-accent rounded-full shadow-[0_0_15px_rgba(99,102,241,0.2)]" />
+         </div>
+
+         <div
+            className={`absolute transition-all ${isDragging ? 'duration-0' : 'duration-300 ease-out'}`}
             style={{ 
-              top: `${verticalPos}%`, 
-              left: `${horizontalPos}%`,
-              transform: 'translateX(-50%)'
+              top: `${verticalPos}%`,
+              left: `calc(${horizontalPos}% - 50vw)`,
+              width: '100vw'
             }}
          >
-            <div className="relative flex items-center justify-center w-full px-12 group">
-                {/* Focus Guides */}
-                <div className={`absolute top-[-80px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 transition-opacity ${isDragging ? 'opacity-40' : 'opacity-20'}`}>
-                    <div className="w-1 h-12 bg-accent rounded-full shadow-[0_0_15px_rgba(99,102,241,0.2)]" />
-                </div>
-                <div className={`absolute bottom-[-80px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 transition-opacity ${isDragging ? 'opacity-40' : 'opacity-20'}`}>
-                    <div className="w-1 h-12 bg-accent rounded-full shadow-[0_0_15px_rgba(99,102,241,0.2)]" />
-                </div>
-                
-                {/* Spritz Word Display */}
-                {currentIndex < words.length ? (
-                    <div 
-                        className="font-bold tracking-tight text-center flex whitespace-nowrap"
-                        style={{ fontSize: `${fontSize}px` }}
-                    >
-                        <span className="text-right flex-1 pr-[0.02em] text-neutral-300">{before}</span>
-                        <span className="text-accent min-w-[0.3em]">{focus}</span>
-                        <span className="text-left flex-1 pl-[0.02em]">{after}</span>
-                    </div>
+             {/* Spritz Word Display — CSS Grid 1fr / auto / 1fr
+                 The auto column (focus letter) is at exactly 50% of 100vw.
+                 No font-metric guessing needed. Works for i, w, m alike. */}
+             {currentIndex < words.length ? (
+                 <div
+                     className="font-bold tracking-tight whitespace-nowrap w-screen"
+                     style={{
+                         fontSize: `${fontSize}px`,
+                         display: 'grid',
+                         gridTemplateColumns: '1fr auto 1fr',
+                         alignItems: 'baseline',
+                     }}
+                 >
+                     <span className="text-neutral-300" style={{ textAlign: 'right' }}>{before}</span>
+                     <span className="text-accent">{focus}</span>
+                     <span style={{ textAlign: 'left' }}>{after}</span>
+                 </div>
                 ) : (
                     <div className="flex flex-col items-center gap-6">
                         <h2 className="text-6xl font-bold bg-gradient-to-r from-accent to-indigo-600 bg-clip-text text-transparent">Great Take!</h2>
@@ -246,9 +283,8 @@ function Teleprompter() {
                 )}
             </div>
          </div>
-      </div>
 
-      {/* Progress & Footer */}
+      {/* Progress + Footer */}
       <div className="absolute bottom-12 left-12 right-12 flex items-center gap-6 pointer-events-none">
          <span className="font-mono text-xs text-neutral-300 tabular-nums">{currentIndex + 1} / {words.length}</span>
          <div className="flex-1 h-[2px] bg-neutral-100 rounded-full overflow-hidden">

@@ -57,11 +57,9 @@ function buildHookVariants(item: ContentItem): string[] {
 }
 
 // ── HookCarousel ─────────────────────────────────────────────────────────────
-function HookCarousel({ hooks }: { hooks: string[] }) {
-  const [idx, setIdx] = useState(0);
-
-  const prev = useCallback(() => setIdx((i) => (i - 1 + hooks.length) % hooks.length), [hooks.length]);
-  const next = useCallback(() => setIdx((i) => (i + 1) % hooks.length), [hooks.length]);
+function HookCarousel({ hooks, selectedIdx, onSelect }: { hooks: string[]; selectedIdx: number; onSelect: (idx: number) => void }) {
+  const prev = useCallback(() => onSelect((selectedIdx - 1 + hooks.length) % hooks.length), [selectedIdx, hooks.length, onSelect]);
+  const next = useCallback(() => onSelect((selectedIdx + 1) % hooks.length), [selectedIdx, hooks.length, onSelect]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -75,7 +73,7 @@ function HookCarousel({ hooks }: { hooks: string[] }) {
   return (
     <div>
       <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-400">
-        Hook · {idx + 1}/{hooks.length}
+        Hook · {selectedIdx + 1}/{hooks.length}
       </p>
 
       <div className="mt-3 flex items-start gap-3">
@@ -91,7 +89,7 @@ function HookCarousel({ hooks }: { hooks: string[] }) {
         </button>
 
         <p className="flex-1 text-sm font-medium leading-relaxed text-neutral-700 italic border-l-2 border-accent pl-4">
-          &ldquo;{hooks[idx]}&rdquo;
+          &ldquo;{hooks[selectedIdx]}&rdquo;
         </p>
 
         <button
@@ -112,6 +110,12 @@ function HookCarousel({ hooks }: { hooks: string[] }) {
 // ── ContentDetailModal ────────────────────────────────────────────────────────
 export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClose: () => void }) {
   const hooks = buildHookVariants(item);
+  const [selectedHookIdx, setSelectedHookIdx] = useState(0);
+
+  const selectedHook = hooks[selectedHookIdx];
+  const derivedScript = item.script.startsWith(item.hook)
+    ? item.script.replace(item.hook, selectedHook)
+    : `${selectedHook}\n\n${item.script}`;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -171,12 +175,12 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
           <h2 className="text-xl font-semibold leading-snug text-ink">{item.title}</h2>
 
           {/* Hook carousel */}
-          <HookCarousel hooks={hooks} />
+          <HookCarousel hooks={hooks} selectedIdx={selectedHookIdx} onSelect={setSelectedHookIdx} />
 
           {/* Script */}
           <div>
             <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-3">Script</p>
-            <p className="text-sm leading-relaxed text-neutral-700 whitespace-pre-wrap">{item.script}</p>
+            <p className="text-sm leading-relaxed text-neutral-700 whitespace-pre-wrap">{derivedScript}</p>
           </div>
 
           {/* Platforms */}
@@ -198,7 +202,7 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
           {/* Actions */}
           <div className="flex items-center gap-3 pt-1 pb-1">
             <Link
-              href={`/teleprompter?script=${encodeURIComponent(item.script)}`}
+              href={`/teleprompter?script=${encodeURIComponent(derivedScript)}`}
               id="content-detail-record"
               className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-ink border border-neutral-200 px-4 py-2.5 rounded-full hover:border-ink transition-colors"
             >
@@ -209,7 +213,7 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
             </Link>
             <button
               id="content-detail-copy"
-              onClick={() => navigator.clipboard.writeText(item.script)}
+              onClick={() => navigator.clipboard.writeText(derivedScript)}
               className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 hover:text-neutral-700 transition-colors"
             >
               Copy Script
