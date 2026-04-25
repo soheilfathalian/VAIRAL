@@ -14,8 +14,51 @@ function client(): GoogleGenAI {
   return _client;
 }
 
-export const PRIMARY_MODEL = process.env.GEMINI_MODEL ?? "gemini-3.1-pro-preview";
-export const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL ?? "gemini-2.5-pro";
+const MODEL_CHAIN: string[] = (process.env.GEMINI_MODEL_CHAIN ?? "gemini-3.1-pro-preview,gemini-2.5-pro,gemini-2.5-flash-lite").split(",").map((s) => s.trim());
+
+const isQuotaError = (e: unknown) => {
+  const msg = (e as Error)?.message ?? String(e);
+  return msg.includes("RESOURCE_EXHAUSTED") || msg.includes("429") || msg.toLowerCase().includes("quota");
+};
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function callOnce(model: string, contents: string, config: Record<string, unknown>) {
+  const c = client();
+  const res = await c.models.generateContent({ model, contents, config: config as never });
+  return { text: res.text ?? "", modelUsed: model };
+}
+
+async function callWithChain(contents: string, config: Record<string, unknown>): Promise<{ text: string; modelUsed: string }> {
+  let lastErr: unknown;
+  for (let i = 0; i < MODEL_CHAIN.length; i++) {
+    const model = MODEL_CHAIN[i];
+    const isLast = i === MODEL_CHAIN.length - 1;
+    const attempts = isLast ? 4 : 1;
+    for (let a = 0; a < attempts; a++) {
+      try {
+        return await callOnce(model, contents, config);
+      } catch (e) {
+        lastErr = e;
+        if (!isQuotaError(e)) {
+          if (i < MODEL_CHAIN.length - 1) {
+            console.warn(`[llm] ${model} non-quota error, trying next: ${(e as Error).message?.slice(0, 80)}`);
+            break;
+          }
+          throw e;
+        }
+        if (isLast && a < attempts - 1) {
+          const delayMs = 1500 * Math.pow(2, a) + Math.floor(Math.random() * 600);
+          console.warn(`[llm] ${model} 429 (attempt ${a + 1}/${attempts}), backing off ${delayMs}ms`);
+          await sleep(delayMs);
+        } else if (!isLast) {
+          console.warn(`[llm] ${model} quota exhausted → trying ${MODEL_CHAIN[i + 1]}`);
+        }
+      }
+    }
+  }
+  throw lastErr;
+}
 
 export async function generateJSON<T>(opts: {
   system: string;
@@ -23,7 +66,6 @@ export async function generateJSON<T>(opts: {
   maxTokens?: number;
   temperature?: number;
 }): Promise<T> {
-  const c = client();
   const cfg = {
     systemInstruction: opts.system,
     responseMimeType: "application/json",
@@ -31,20 +73,8 @@ export async function generateJSON<T>(opts: {
     temperature: opts.temperature ?? 0.7,
   };
 
-  let modelUsed = PRIMARY_MODEL;
-  let res;
-  try {
-    res = await c.models.generateContent({ model: PRIMARY_MODEL, contents: opts.user, config: cfg });
-  } catch (e) {
-    const msg = (e as Error).message ?? String(e);
-    const isQuota = msg.includes("RESOURCE_EXHAUSTED") || msg.includes("429") || msg.includes("quota");
-    if (!isQuota || PRIMARY_MODEL === FALLBACK_MODEL) throw e;
-    console.warn(`[llm] ${PRIMARY_MODEL} quota exhausted → falling back to ${FALLBACK_MODEL}`);
-    modelUsed = FALLBACK_MODEL;
-    res = await c.models.generateContent({ model: FALLBACK_MODEL, contents: opts.user, config: cfg });
-  }
+  const { text, modelUsed } = await callWithChain(opts.user, cfg);
 
-  const text = res.text ?? "";
   if (!text) throw new Error(`Gemini (${modelUsed}) returned empty response`);
   const cleaned = text.replace(/^```json\s*/i, "").replace(/\s*```$/, "").trim();
   try {

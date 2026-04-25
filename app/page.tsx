@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Slate } from "@/lib/pipeline/types";
-import { KNOWN_ALIASES } from "@/lib/peec/projects";
 import { BrandPicker } from "./components/BrandPicker";
 import Link from "next/link";
 
@@ -43,7 +42,7 @@ export default async function Home() {
   return (
     <main className="min-h-screen px-8 py-16 max-w-5xl mx-auto">
       <Header />
-      <BrandPicker projects={KNOWN_ALIASES} currentBrand={slate?.brand.name ?? ""} />
+      <BrandPicker currentBrand={slate?.brand.name ?? ""} />
 
       {!slate ? (
         <div className="mt-12 rounded-xl border border-neutral-200 p-8">

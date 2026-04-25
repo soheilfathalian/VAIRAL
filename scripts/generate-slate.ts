@@ -2,16 +2,25 @@ import "dotenv/config";
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { peec, dateRange } from "../lib/peec/client";
-import { resolveProject } from "../lib/peec/projects";
-import { headlineInsight } from "../lib/pipeline/insight";
+import { resolveProject, listProjects } from "../lib/peec/projects";
 import { hasLLM } from "../lib/llm/client";
 import { generateSlate } from "../lib/pipeline/slate";
 import type { Slate } from "../lib/pipeline/types";
 
 const arg = process.argv[2];
-const target = resolveProject(arg);
 
-console.log(`\n[vairal] Target project: ${target.label} (${target.id})`);
+if (arg === "--list" || arg === "-l") {
+  const projects = await listProjects();
+  console.log(`\n${projects.length} projects available:\n`);
+  for (const p of projects) {
+    console.log(`  ${p.id}  ${p.name}`);
+  }
+  console.log();
+  process.exit(0);
+}
+
+const target = await resolveProject(arg);
+console.log(`\n[vairal] Target project: ${target.name} (${target.id})`);
 
 const OUT_DIR = "data/slate";
 
@@ -24,9 +33,8 @@ async function dataOnlySlate(projectId: string): Promise<Slate> {
     peec.brandReport(projectId, { ...range, limit: 50 }),
     peec.urlReport(projectId, { ...range, limit: 200 }),
   ]);
-  const own = brands.find((b) => b.is_own);
-  if (!own) throw new Error(`No own brand (is_own:true) found in project ${projectId}`);
-  const insight = headlineInsight(brandReport, own.name);
+  const own = brands.find((b) => b.is_own) ?? brands[0];
+  if (!own) throw new Error(`Project ${projectId} has no brands configured`);
   const yt = urlReport.filter((u) => u.url.includes("youtube.com") && u.channel_title);
 
   return {
@@ -34,7 +42,11 @@ async function dataOnlySlate(projectId: string): Promise<Slate> {
     brand: { id: own.id, name: own.name },
     project_id: projectId,
     date_range: range,
-    headline_insight: insight,
+    headline_insight: {
+      headline: `${own.name}: data-only mode (set GEMINI_API_KEY for full analysis)`,
+      subhead: `${brandReport.length} brand report rows, ${topics.length} topics, ${yt.length} YouTube channels in source data.`,
+      evidence: [],
+    },
     long_form: {
       topic: topics[0]?.name ?? "TBD",
       topic_id: topics[0]?.id ?? "",
@@ -68,7 +80,8 @@ const slate = hasLLM ? await generateSlate(target.id) : await dataOnlySlate(targ
 
 await mkdir(OUT_DIR, { recursive: true });
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-const path = join(OUT_DIR, `${target.alias}-${stamp}.json`);
+const slug = target.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const path = join(OUT_DIR, `${slug}-${stamp}.json`);
 const latest = join(OUT_DIR, "latest.json");
 await writeFile(path, JSON.stringify(slate, null, 2));
 await writeFile(latest, JSON.stringify(slate, null, 2));

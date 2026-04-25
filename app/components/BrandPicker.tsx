@@ -1,23 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Project = { alias: string; id: string; label: string };
+type ProjectInfo = { id: string; name: string; status: string };
 
-export function BrandPicker({ projects, currentBrand }: { projects: Project[]; currentBrand: string }) {
+export function BrandPicker({ currentBrand }: { currentBrand: string }) {
   const router = useRouter();
+  const [projects, setProjects] = useState<ProjectInfo[] | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function generate(alias: string) {
-    setGenerating(alias);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/projects")
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data.error) setError(data.error);
+        else setProjects(data.projects ?? []);
+      })
+      .catch((e) => !cancelled && setError(e.message));
+    return () => { cancelled = true; };
+  }, []);
+
+  async function generate(projectId: string) {
+    setGenerating(projectId);
     setError(null);
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project: alias }),
+        body: JSON.stringify({ project: projectId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
@@ -29,27 +43,49 @@ export function BrandPicker({ projects, currentBrand }: { projects: Project[]; c
     }
   }
 
+  if (projects === null) {
+    return (
+      <div className="mt-8 text-sm text-neutral-500 font-mono">Loading projects from Peec…</div>
+    );
+  }
+
+  if (projects.length === 0) {
+    return (
+      <div className="mt-8 text-sm text-neutral-500">
+        No Peec projects accessible to this API key. Create one in the Peec dashboard.
+      </div>
+    );
+  }
+
   return (
-    <div className="mt-8 flex flex-wrap items-center gap-2">
-      <span className="font-mono text-xs uppercase tracking-widest text-neutral-500 mr-2">Generate for</span>
-      {projects.map((p) => {
-        const isCurrent = p.label === currentBrand;
-        const isLoading = generating === p.alias;
-        return (
-          <button
-            key={p.alias}
-            onClick={() => generate(p.alias)}
-            disabled={generating !== null}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition border
-              ${isCurrent ? "bg-ink text-paper border-ink" : "bg-white text-ink border-neutral-300 hover:border-ink"}
-              ${generating !== null ? "opacity-50 cursor-not-allowed" : ""}
-            `}
-          >
-            {isLoading ? `${p.label} · generating…` : p.label}
-          </button>
-        );
-      })}
-      {error && <span className="text-sm text-red-600 ml-3">{error}</span>}
+    <div className="mt-8">
+      <div className="flex items-center gap-3 mb-3">
+        <span className="font-mono text-xs uppercase tracking-widest text-neutral-500">
+          Generate slate for ({projects.length} projects available)
+        </span>
+        {error && <span className="text-sm text-red-600">⚠ {error}</span>}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {projects.map((p) => {
+          const isCurrent = p.name === currentBrand;
+          const isLoading = generating === p.id;
+          const anyLoading = generating !== null;
+          return (
+            <button
+              key={p.id}
+              onClick={() => generate(p.id)}
+              disabled={anyLoading}
+              title={p.id}
+              className={`px-3 py-1.5 rounded-full text-sm transition border whitespace-nowrap
+                ${isCurrent ? "bg-ink text-paper border-ink" : "bg-white text-ink border-neutral-300 hover:border-ink"}
+                ${anyLoading ? "opacity-50 cursor-not-allowed" : ""}
+              `}
+            >
+              {isLoading ? `${p.name} · generating…` : p.name}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

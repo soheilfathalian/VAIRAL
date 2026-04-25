@@ -1,35 +1,38 @@
 import "dotenv/config";
 import { peec } from "./client";
 
-export type ProjectAlias = { alias: string; id: string; label: string };
+export type ProjectInfo = { id: string; name: string; status: string };
 
-export const KNOWN_ALIASES: ProjectAlias[] = [
-  {
-    alias: "nothing",
-    id: process.env.PEEC_PROJECT_NOTHING ?? "or_faaa7625-bc84-4f64-a754-a412d423c641",
-    label: "Nothing Phone",
-  },
-  {
-    alias: "attio",
-    id: process.env.PEEC_PROJECT_ATTIO ?? "or_47ccb54e-0f32-4c95-b460-6a070499d084",
-    label: "Attio",
-  },
-];
+let _cache: { at: number; projects: ProjectInfo[] } | null = null;
+const TTL_MS = 60_000;
 
-export function resolveProject(input: string | undefined): { id: string; alias: string; label: string } {
-  if (!input) {
-    const def = KNOWN_ALIASES[0];
-    return { id: def.id, alias: def.alias, label: def.label };
-  }
-  const normalised = input.toLowerCase().trim();
-  const known = KNOWN_ALIASES.find((p) => p.alias === normalised);
-  if (known) return { id: known.id, alias: known.alias, label: known.label };
-  if (input.startsWith("or_")) return { id: input, alias: input, label: input };
-  throw new Error(
-    `Unknown project: "${input}". Use a known alias (${KNOWN_ALIASES.map((p) => p.alias).join(", ")}) or a full project_id starting with or_`
-  );
+export async function listProjects(): Promise<ProjectInfo[]> {
+  if (_cache && Date.now() - _cache.at < TTL_MS) return _cache.projects;
+  const projects = await peec.listProjects();
+  _cache = { at: Date.now(), projects };
+  return projects;
 }
 
-export async function listAccessibleProjects() {
-  return peec.listProjects();
+export async function resolveProject(input: string | undefined): Promise<ProjectInfo> {
+  const projects = await listProjects();
+  if (!input) {
+    if (projects.length === 0) throw new Error("No Peec projects accessible to this API key");
+    return projects[0];
+  }
+
+  if (input.startsWith("or_")) {
+    const exact = projects.find((p) => p.id === input);
+    if (exact) return exact;
+    return { id: input, name: input, status: "UNKNOWN" };
+  }
+
+  const normalised = input.toLowerCase().trim();
+  const match =
+    projects.find((p) => p.name.toLowerCase() === normalised) ??
+    projects.find((p) => p.name.toLowerCase().includes(normalised));
+  if (match) return match;
+
+  throw new Error(
+    `No project matched "${input}". Available: ${projects.map((p) => p.name).join(", ")}`
+  );
 }

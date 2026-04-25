@@ -7,6 +7,7 @@ import { hasLLM } from "@/lib/llm/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   if (!hasLLM) {
@@ -14,13 +15,14 @@ export async function POST(req: NextRequest) {
   }
   try {
     const body = (await req.json().catch(() => ({}))) as { project?: string };
-    const target = resolveProject(body.project);
+    const target = await resolveProject(body.project);
     const slate = await generateSlate(target.id);
 
     const dir = "data/slate";
     await mkdir(dir, { recursive: true });
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    await writeFile(join(dir, `${target.alias}-${stamp}.json`), JSON.stringify(slate, null, 2));
+    const slug = target.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    await writeFile(join(dir, `${slug}-${stamp}.json`), JSON.stringify(slate, null, 2));
     await writeFile(join(dir, "latest.json"), JSON.stringify(slate, null, 2));
 
     return NextResponse.json({ ok: true, brand: slate.brand.name, project: target });

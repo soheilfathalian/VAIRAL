@@ -1,5 +1,5 @@
 import { peec, dateRange } from "../peec/client";
-import { headlineInsight } from "./insight";
+import { buildInsight } from "./insight";
 import { buildLongFormBrief } from "./long-form";
 import { buildShorts } from "./shorts";
 import { buildPitches } from "./pitches";
@@ -8,26 +8,45 @@ import type { Slate } from "./types";
 export async function generateSlate(projectId: string, days = 30): Promise<Slate> {
   const range = dateRange(days);
 
-  const [brands, topics, brandReport] = await Promise.all([
+  const [brands, topics, brandReport, domainReport] = await Promise.all([
     peec.listBrands(projectId),
     peec.listTopics(projectId),
     peec.brandReport(projectId, { ...range, limit: 50 }),
+    peec.domainReport(projectId, { ...range, limit: 30 }),
   ]);
 
-  const own = brands.find((b) => b.is_own);
-  if (!own) throw new Error(`No own brand found in project ${projectId}`);
+  if (brandReport.length === 0) {
+    throw new Error(
+      `Project ${projectId} has no brand report data in the last ${days} days. ` +
+        `The project may be new — Peec needs at least a week of scrape data before Vairal can analyse.`
+    );
+  }
 
-  const insight = headlineInsight(brandReport, own.name);
+  const own = brands.find((b) => b.is_own) ?? brands[0];
+  if (!own) throw new Error(`Project ${projectId} has no brands configured`);
+  if (!brands.some((b) => b.is_own)) {
+    console.warn(`[slate] No is_own brand in project ${projectId}, falling back to first brand: ${own.name}`);
+  }
 
   console.log(`\n[slate] Brand: ${own.name}`);
-  console.log(`[slate] ${insight.headline}`);
-  console.log(`[slate] Generating tracks in parallel...\n`);
+  console.log(`[slate] Topics: ${topics.length} · Brands tracked: ${brands.length} · Brand report rows: ${brandReport.length}`);
+  console.log(`[slate] Generating insight + tracks sequentially (Gemini free-tier RPM)...\n`);
 
-  const [longForm, shorts, pitches] = await Promise.all([
-    buildLongFormBrief({ projectId, ownBrandName: own.name, topics, brandReport, range }),
-    buildShorts({ projectId, ownBrandName: own.name, topics, brandReport, range }),
-    buildPitches({ projectId, ownBrandName: own.name, range }),
-  ]);
+  console.log(`[slate]   1/4 insight...`);
+  const insight = await buildInsight({ brandName: own.name, brandReport, domainReport, range });
+  console.log(`[slate]   ✓ ${insight.headline}`);
+
+  console.log(`[slate]   2/4 long-form brief...`);
+  const longForm = await buildLongFormBrief({ projectId, ownBrandName: own.name, topics, brandReport, range });
+  console.log(`[slate]   ✓ ${longForm.title}`);
+
+  console.log(`[slate]   3/4 shorts...`);
+  const shorts = await buildShorts({ projectId, ownBrandName: own.name, topics, brandReport, range });
+  console.log(`[slate]   ✓ ${shorts.length} shorts scripts`);
+
+  console.log(`[slate]   4/4 channel pitches...`);
+  const pitches = await buildPitches({ projectId, ownBrandName: own.name, range });
+  console.log(`[slate]   ✓ ${pitches.length} pitches`);
 
   return {
     generated_at: new Date().toISOString(),
