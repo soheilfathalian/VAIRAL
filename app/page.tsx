@@ -17,6 +17,26 @@ async function loadSlate(): Promise<Slate | null> {
 
 export const dynamic = "force-dynamic";
 
+function Header() {
+  return (
+    <header className="flex justify-between items-end">
+      <div>
+        <p className="font-mono text-xs uppercase tracking-widest text-accent">Vairal</p>
+        <h1 className="mt-3 text-5xl font-semibold tracking-tight">Founder channel engine</h1>
+        <p className="mt-3 text-lg text-neutral-600 max-w-2xl">
+          Pick an underdog brand. Vairal pulls how AI engines talk about it (via Peec AI), then ships a week of UGC video production: long-form for citation, shorts for reach, channel pitches for compounding.
+        </p>
+      </div>
+      <Link href="/content-plan" className="mb-1 font-mono text-xs uppercase tracking-widest text-neutral-400 hover:text-accent transition-colors flex items-center gap-2">
+        View Content Plan
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </Link>
+    </header>
+  );
+}
+
 export default async function Home() {
   const slate = await loadSlate();
 
@@ -41,26 +61,6 @@ export default async function Home() {
         </>
       )}
     </main>
-  );
-}
-
-function Header() {
-  return (
-    <header className="flex justify-between items-end">
-      <div>
-        <p className="font-mono text-xs uppercase tracking-widest text-accent">Vairal</p>
-        <h1 className="mt-3 text-5xl font-semibold tracking-tight">Founder channel engine</h1>
-        <p className="mt-3 text-lg text-neutral-600 max-w-2xl">
-          Pick an underdog brand. Vairal pulls how AI engines talk about it (via Peec AI), then ships a week of UGC video production: long-form for citation, shorts for reach, channel pitches for compounding.
-        </p>
-      </div>
-      <Link href="/content-plan" className="mb-1 font-mono text-xs uppercase tracking-widest text-neutral-400 hover:text-accent transition-colors flex items-center gap-2">
-        View Content Plan
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      </Link>
-    </header>
   );
 }
 
