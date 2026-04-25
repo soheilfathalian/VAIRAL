@@ -1,0 +1,273 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import type { ContentItem } from "@/lib/pipeline/types";
+
+// ── Hook variants ─────────────────────────────────────────────────────────────
+function buildHookVariants(item: ContentItem): string[] {
+  const base = item.hook;
+  return [
+    base,
+    `${base}?`,
+    `Here's why ${item.metadata.topic} changed everything — and most creators missed it.`,
+    `Unpopular opinion: ${base.charAt(0).toLowerCase() + base.slice(1)}`,
+    `They never talk about this side of ${item.metadata.topic}. Let's fix that.`,
+  ];
+}
+
+// ── HookCarousel ─────────────────────────────────────────────────────────────
+function HookCarousel({ hooks }: { hooks: string[] }) {
+  const [idx, setIdx] = useState(0);
+
+  const prev = useCallback(() => setIdx((i) => (i - 1 + hooks.length) % hooks.length), [hooks.length]);
+  const next = useCallback(() => setIdx((i) => (i + 1) % hooks.length), [hooks.length]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [prev, next]);
+
+  return (
+    <div>
+      <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-400">
+        Hook · {idx + 1}/{hooks.length}
+      </p>
+
+      <div className="mt-3 flex items-start gap-3">
+        <button
+          id="hook-prev"
+          onClick={prev}
+          aria-label="Previous hook"
+          className="mt-0.5 text-neutral-300 hover:text-neutral-600 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        <p className="flex-1 text-sm font-medium leading-relaxed text-neutral-700 italic border-l-2 border-accent pl-4">
+          &ldquo;{hooks[idx]}&rdquo;
+        </p>
+
+        <button
+          id="hook-next"
+          onClick={next}
+          aria-label="Next hook"
+          className="mt-0.5 text-neutral-300 hover:text-neutral-600 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── ContentDetailModal ────────────────────────────────────────────────────────
+export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClose: () => void }) {
+  const hooks = buildHookVariants(item);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const typeLabel: Record<ContentItem["type"], string> = {
+    SHORT: "Short",
+    LONG_FORM_CHAPTER: "Chapter",
+    LONG_FORM_FULL: "Long-form",
+    PITCH_PROMO: "Pitch",
+  };
+
+  const scheduled = new Date(item.scheduled_at);
+
+  return (
+    <div
+      id="content-detail-backdrop"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-ink/30" onClick={onClose} />
+
+      {/* Panel — matches the existing card/section style */}
+      <article
+        id="content-detail-panel"
+        className="relative z-10 w-full sm:max-w-xl max-h-[85vh] overflow-y-auto bg-white rounded-t-3xl sm:rounded-2xl border border-neutral-200 shadow-xl"
+      >
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-7 pt-6 pb-4 border-b border-neutral-100">
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-neutral-400">
+              {typeLabel[item.type]}
+            </span>
+            <span className="text-neutral-200">·</span>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-neutral-400">
+              {scheduled.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}{" "}
+              {scheduled.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
+            </span>
+          </div>
+          <button
+            id="content-detail-close"
+            onClick={onClose}
+            aria-label="Close"
+            className="text-neutral-300 hover:text-neutral-600 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="px-7 py-6 space-y-7">
+          {/* Title */}
+          <h2 className="text-xl font-semibold leading-snug text-ink">{item.title}</h2>
+
+          {/* Hook carousel */}
+          <HookCarousel hooks={hooks} />
+
+          {/* Script */}
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-3">Script</p>
+            <p className="text-sm leading-relaxed text-neutral-700 whitespace-pre-wrap">{item.script}</p>
+          </div>
+
+          {/* Hashtags */}
+          {item.metadata.hashtags.length > 0 && (
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {item.metadata.hashtags.map((h) => (
+                <span key={h} className="text-xs text-accent">{h}</span>
+              ))}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center gap-3 pt-1 pb-1">
+            <Link
+              href={`/teleprompter?script=${encodeURIComponent(item.script)}`}
+              id="content-detail-record"
+              className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-ink border border-neutral-200 px-4 py-2.5 rounded-full hover:border-ink transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Record Take
+            </Link>
+            <button
+              id="content-detail-copy"
+              onClick={() => navigator.clipboard.writeText(item.script)}
+              className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 hover:text-neutral-700 transition-colors"
+            >
+              Copy Script
+            </button>
+          </div>
+        </div>
+      </article>
+    </div>
+  );
+}
+
+// ── ContentCard ───────────────────────────────────────────────────────────────
+export function ContentCard({ item }: { item: ContentItem }) {
+  const [open, setOpen] = useState(false);
+  const [done, setDone] = useState(false);
+
+  // Persist done state per item across page refreshes
+  useEffect(() => {
+    const stored = localStorage.getItem(`done:${item.id}`);
+    if (stored === "1") setDone(true);
+  }, [item.id]);
+
+  const toggleDone = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = !done;
+    setDone(next);
+    localStorage.setItem(`done:${item.id}`, next ? "1" : "0");
+  };
+
+  const typeColors: Record<ContentItem["type"], string> = {
+    SHORT: "bg-indigo-50 text-indigo-600",
+    LONG_FORM_CHAPTER: "bg-amber-50 text-amber-600",
+    LONG_FORM_FULL: "bg-emerald-50 text-emerald-600",
+    PITCH_PROMO: "bg-neutral-50 text-neutral-400",
+  };
+
+  return (
+    <>
+      <article
+        id={`content-card-${item.id}`}
+        className={`group relative rounded-2xl border p-5 bg-white transition-all flex flex-col h-56 ${
+          done
+            ? "border-neutral-100 opacity-50"
+            : "border-neutral-200 hover:border-accent hover:shadow-[0_10px_30px_-10px_rgba(99,102,241,0.2)]"
+        }`}
+      >
+        <div className="flex justify-between items-start">
+          <span className={`text-[8px] font-mono font-bold uppercase tracking-widest px-2 py-1 rounded-md ${typeColors[item.type]}`}>
+            {item.type.replace(/_/g, " ")}
+          </span>
+
+          {/* Done checkmark */}
+          <button
+            id={`content-card-done-${item.id}`}
+            onClick={toggleDone}
+            aria-label={done ? "Mark as not done" : "Mark as done"}
+            className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors flex-shrink-0 ${
+              done
+                ? "border-emerald-400 bg-emerald-400"
+                : "border-neutral-300 hover:border-neutral-500"
+            }`}
+          >
+            {done && (
+              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {/* Clickable title */}
+        <button
+          id={`content-card-title-${item.id}`}
+          onClick={() => setOpen(true)}
+          className={`mt-4 text-left text-xs font-semibold leading-relaxed transition-colors line-clamp-3 hover:underline underline-offset-2 ${
+            done ? "line-through text-neutral-400" : "text-ink group-hover:text-accent"
+          }`}
+        >
+          {item.title}
+        </button>
+
+        <div className="mt-2 flex gap-1">
+          {item.metadata.platforms.map((p) => (
+            <span key={p} className="text-[7px] font-mono bg-neutral-50 text-neutral-400 px-1 rounded uppercase">
+              {p.slice(0, 2)}
+            </span>
+          ))}
+        </div>
+
+        {!done && (
+          <div className="mt-auto pt-4 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
+            <Link
+              href={`/teleprompter?script=${encodeURIComponent(item.script)}`}
+              className="inline-flex items-center gap-1 text-[10px] font-bold text-accent uppercase tracking-wider"
+            >
+              Record Take
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+        )}
+      </article>
+
+      {open && <ContentDetailModal item={item} onClose={() => setOpen(false)} />}
+    </>
+  );
+}

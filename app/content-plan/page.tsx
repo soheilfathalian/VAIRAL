@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { Slate } from "@/lib/pipeline/types";
 import { generateSmartPlan } from "@/lib/pipeline/planner";
 import Link from "next/link";
+import { ContentCard } from "../components/ContentDetailView";
 
 async function loadSlate(): Promise<Slate | null> {
   try {
@@ -76,43 +77,7 @@ export default async function ContentPlanPage() {
 
             <div className="space-y-4">
               {dayPlan.items.map((item) => (
-                <article key={item.id} className="group relative rounded-2xl border border-neutral-200 p-5 bg-white hover:border-accent hover:shadow-[0_10px_30px_-10px_rgba(99,102,241,0.2)] transition-all flex flex-col h-56">
-                  <div className="flex justify-between items-start">
-                    <span className={`text-[8px] font-mono font-bold uppercase tracking-widest px-2 py-1 rounded-md ${
-                      item.type === 'SHORT' ? 'bg-indigo-50 text-indigo-600' : 
-                      item.type === 'LONG_FORM_CHAPTER' ? 'bg-amber-50 text-amber-600' : 
-                      item.type === 'LONG_FORM_FULL' ? 'bg-emerald-50 text-emerald-600' :
-                      'bg-neutral-50 text-neutral-400'
-                    }`}>
-                      {item.type.replace('_', ' ')}
-                    </span>
-                    <span className="text-[9px] font-mono font-bold text-neutral-400">
-                        {new Date(item.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                    </span>
-                  </div>
-
-                  <h3 className="mt-4 text-xs font-semibold leading-relaxed text-ink group-hover:text-accent transition-colors line-clamp-3">
-                    {item.title}
-                  </h3>
-                  
-                  <div className="mt-2 flex gap-1">
-                    {item.metadata.platforms.map(p => (
-                        <span key={p} className="text-[7px] font-mono bg-neutral-50 text-neutral-400 px-1 rounded uppercase">{p.slice(0, 2)}</span>
-                    ))}
-                  </div>
-
-                  <div className="mt-auto pt-4 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
-                    <Link 
-                      href={`/teleprompter?script=${encodeURIComponent(item.script)}`}
-                      className="inline-flex items-center gap-1 text-[10px] font-bold text-accent uppercase tracking-wider"
-                    >
-                      Record Take
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  </div>
-                </article>
+                <ContentCard key={item.id} item={item} />
               ))}
             </div>
           </section>
