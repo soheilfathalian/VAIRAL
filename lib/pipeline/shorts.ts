@@ -1,5 +1,6 @@
 import { peec } from "../peec/client";
 import { generateJSON } from "../llm/client";
+import { tavilySearch, hasTavily } from "../tavily/client";
 import type { ShortScript } from "./types";
 import type { BrandReportRow, Topic } from "../peec/types";
 
@@ -39,7 +40,7 @@ export async function buildShorts(args: Args): Promise<ShortScript[]> {
     })
   );
 
-  return generateJSON<ShortScript[]>({
+  const scripts = await generateJSON<ShortScript[]>({
     system: shortsSystem(ownBrandName),
     user: JSON.stringify({
       brand: ownBrandName,
@@ -52,6 +53,44 @@ export async function buildShorts(args: Args): Promise<ShortScript[]> {
       })),
     }, null, 2),
   });
+
+  // Enrich each Short with a Tavily fresh news anchor (graceful fallback if no key)
+  if (!hasTavily) {
+    console.log(`[shorts] Tavily key not set — skipping news freshness enrichment`);
+    return scripts;
+  }
+
+  const enriched = await Promise.all(
+    scripts.map(async (script, i) => {
+      const competitorName = script.competitor_wedge?.name ?? wedges[i]?.competitor.brand.name ?? "";
+      if (!competitorName) return script;
+      try {
+        const news = await tavilySearch({
+          query: `${competitorName} criticism review problems controversy`,
+          topic: "news",
+          days: 14,
+          max_results: 1,
+        });
+        const top = news.results[0] ?? null;
+        return {
+          ...script,
+          fresh_news_anchor: top
+            ? {
+                title: top.title,
+                url: top.url,
+                snippet: top.content.slice(0, 200),
+                date: top.published_date ?? new Date().toISOString().slice(0, 10),
+              }
+            : null,
+        };
+      } catch (err) {
+        console.warn(`[shorts] Tavily enrichment failed for "${competitorName}": ${err}`);
+        return script;
+      }
+    })
+  );
+
+  return enriched;
 }
 
 function shortsSystem(brand: string): string {

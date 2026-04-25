@@ -5,6 +5,7 @@ import { peec, dateRange } from "../lib/peec/client";
 import { resolveProject, listProjects } from "../lib/peec/projects";
 import { hasLLM } from "../lib/llm/client";
 import { generateSlate } from "../lib/pipeline/slate";
+import { computeGapAnalysis } from "../lib/pipeline/gap-analysis";
 import type { Slate } from "../lib/pipeline/types";
 
 const arg = process.argv[2];
@@ -27,11 +28,12 @@ const OUT_DIR = "data/slate";
 async function dataOnlySlate(projectId: string): Promise<Slate> {
   console.log("[vairal] No GEMINI_API_KEY — running data-only mode\n");
   const range = dateRange(30);
-  const [brands, topics, brandReport, urlReport] = await Promise.all([
+  const [brands, topics, brandReport, urlReport, domainReport] = await Promise.all([
     peec.listBrands(projectId),
     peec.listTopics(projectId),
     peec.brandReport(projectId, { ...range, limit: 50 }),
     peec.urlReport(projectId, { ...range, limit: 200 }),
+    peec.domainReport(projectId, { ...range, limit: 30 }),
   ]);
   const own = brands.find((b) => b.is_own) ?? brands[0];
   if (!own) throw new Error(`Project ${projectId} has no brands configured`);
@@ -73,6 +75,7 @@ async function dataOnlySlate(projectId: string): Promise<Slate> {
       email_subject: "",
       email_body: "",
     })),
+    gap_analysis: computeGapAnalysis(domainReport, own, brands),
   };
 }
 
@@ -91,5 +94,6 @@ console.log(`[vairal]   headline:  ${slate.headline_insight.headline}`);
 console.log(`[vairal]   long-form: ${slate.long_form.title}`);
 console.log(`[vairal]   shorts:    ${slate.shorts.length}`);
 console.log(`[vairal]   pitches:   ${slate.pitches.length}`);
+console.log(`[vairal]   gaps:      ${slate.gap_analysis.gaps.length} source gaps found`);
 console.log(`[vairal]   saved:     ${path}`);
 console.log(`[vairal]   latest:    ${latest}\n`);

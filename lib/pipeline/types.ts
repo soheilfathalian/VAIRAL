@@ -4,6 +4,24 @@ export type Insight = {
   evidence: { metric: string; value: string }[];
 };
 
+export type SourceGap = {
+  domain: string;
+  classification: string;
+  retrieved_percentage: number; // % of AI chats that retrieved this domain
+  retrieval_rate: number;       // avg URLs retrieved per chat
+  citation_rate: number;        // citations per retrieval
+  competitors_present: string[]; // tracked competitor names found there
+  gap_score: number;            // retrieved_percentage × citation_rate × competitor_count
+  recommended_action: string;   // e.g. "PR / journalist pitch"
+  content_format: string;       // e.g. "Press release, product loan"
+};
+
+export type GapAnalysis = {
+  gaps: SourceGap[];
+  total_gaps_found: number;
+  summary: string;
+};
+
 export type LongFormBrief = {
   topic: string;
   topic_id: string;
@@ -27,6 +45,7 @@ export type ShortScript = {
   on_screen_text: string[];
   hashtags: string[];
   shot_list: string[];
+  fresh_news_anchor?: { title: string; url: string; snippet: string; date: string } | null;
 };
 
 export type ChannelPitch = {
@@ -56,6 +75,7 @@ export type Slate = {
   long_form: LongFormBrief;
   shorts: ShortScript[];
   pitches: ChannelPitch[];
+  gap_analysis: GapAnalysis;
   replay?: ReplayValidation;
 };
 

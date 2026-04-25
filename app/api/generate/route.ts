@@ -3,15 +3,15 @@ import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { generateSlate } from "@/lib/pipeline/slate";
 import { resolveProject } from "@/lib/peec/projects";
-import { hasLLM } from "@/lib/llm/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
-  if (!hasLLM) {
-    return NextResponse.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 });
+  // Check at request time, not module-load time (Next.js injects env after module init)
+  if (!process.env.GEMINI_API_KEY) {
+    return NextResponse.json({ error: "GEMINI_API_KEY not configured in .env" }, { status: 500 });
   }
   try {
     const body = (await req.json().catch(() => ({}))) as { project?: string };

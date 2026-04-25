@@ -3,6 +3,7 @@ import { buildInsight } from "./insight";
 import { buildLongFormBrief } from "./long-form";
 import { buildShorts } from "./shorts";
 import { buildPitches } from "./pitches";
+import { computeGapAnalysis } from "./gap-analysis";
 import type { Slate } from "./types";
 
 export async function generateSlate(projectId: string, days = 30): Promise<Slate> {
@@ -28,8 +29,12 @@ export async function generateSlate(projectId: string, days = 30): Promise<Slate
     console.warn(`[slate] No is_own brand in project ${projectId}, falling back to first brand: ${own.name}`);
   }
 
+  // Pure computation — no extra API call, domain report already fetched above
+  const gapAnalysis = computeGapAnalysis(domainReport, own, brands);
+
   console.log(`\n[slate] Brand: ${own.name}`);
   console.log(`[slate] Topics: ${topics.length} · Brands tracked: ${brands.length} · Brand report rows: ${brandReport.length}`);
+  console.log(`[slate] Source gaps computed: ${gapAnalysis.total_gaps_found} gaps found, top ${gapAnalysis.gaps.length} surfaced`);
   console.log(`[slate] Generating insight + tracks sequentially (Gemini free-tier RPM)...\n`);
 
   console.log(`[slate]   1/4 insight...`);
@@ -57,5 +62,6 @@ export async function generateSlate(projectId: string, days = 30): Promise<Slate
     long_form: longForm,
     shorts,
     pitches,
+    gap_analysis: gapAnalysis,
   };
 }
