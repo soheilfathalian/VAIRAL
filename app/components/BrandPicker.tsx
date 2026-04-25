@@ -65,26 +65,31 @@ export function BrandPicker({ currentBrand }: { currentBrand: string }) {
         </span>
         {error && <span className="text-sm text-red-600">⚠ {error}</span>}
       </div>
-      <div className="flex flex-wrap gap-2">
-        {projects.map((p) => {
-          const isCurrent = p.name === currentBrand;
-          const isLoading = generating === p.id;
-          const anyLoading = generating !== null;
-          return (
-            <button
-              key={p.id}
-              onClick={() => generate(p.id)}
-              disabled={anyLoading}
-              title={p.id}
-              className={`px-3 py-1.5 rounded-full text-sm transition border whitespace-nowrap
-                ${isCurrent ? "bg-ink text-paper border-ink" : "bg-white text-ink border-neutral-300 hover:border-ink"}
-                ${anyLoading ? "opacity-50 cursor-not-allowed" : ""}
-              `}
-            >
-              {isLoading ? `${p.name} · generating…` : p.name}
-            </button>
-          );
-        })}
+      <div className="mt-2">
+        <select
+          disabled={generating !== null}
+          onChange={(e) => {
+            if (e.target.value) generate(e.target.value);
+          }}
+          value={currentBrand ? projects.find((p) => p.name === currentBrand)?.id ?? "" : ""}
+          className="w-full max-w-sm px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-sm text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition-all disabled:opacity-50 disabled:cursor-not-allowed appearance-none cursor-pointer"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+            backgroundPosition: "right 0.75rem center",
+            backgroundRepeat: "no-repeat",
+            backgroundSize: "1rem 1rem",
+            paddingRight: "2.5rem"
+          }}
+        >
+          <option value="" disabled>
+            {generating ? "Generating..." : "Select a brand to generate slate..."}
+          </option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   );
