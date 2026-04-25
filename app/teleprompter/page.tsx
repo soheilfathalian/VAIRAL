@@ -22,6 +22,7 @@ function Teleprompter() {
   const dragStartX = useRef(0);
   const initialVerticalPos = useRef(0);
   const initialHorizontalPos = useRef(0);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Load settings
   useEffect(() => {
@@ -37,17 +38,20 @@ function Teleprompter() {
         console.error("Failed to load prompter settings", e);
       }
     }
+    setIsLoaded(true);
   }, []);
 
-  // Save settings
+  // Save settings (only after initial load)
   useEffect(() => {
+    if (!isLoaded) return;
+    
     localStorage.setItem("vairal-teleprompter-settings", JSON.stringify({
       wpm,
       vPos: verticalPos,
       hPos: horizontalPos,
       fSize: fontSize
     }));
-  }, [wpm, verticalPos, horizontalPos, fontSize]);
+  }, [isLoaded, wpm, verticalPos, horizontalPos, fontSize]);
 
   // Natural-reading delay multipliers
   const getWordDelay = (word: string, baseMs: number): number => {
@@ -78,6 +82,18 @@ function Teleprompter() {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [isPlaying, currentIndex, words.length, wpm]);
+
+  // Keyboard shortcut: Spacebar to toggle Play/Pause
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        e.preventDefault(); // prevent page scroll
+        setIsPlaying((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Handle Dragging
   useEffect(() => {
