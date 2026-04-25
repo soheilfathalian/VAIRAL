@@ -111,11 +111,31 @@ function HookCarousel({ hooks, selectedIdx, onSelect }: { hooks: string[]; selec
 export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClose: () => void }) {
   const hooks = buildHookVariants(item);
   const [selectedHookIdx, setSelectedHookIdx] = useState(0);
+  const [images, setImages] = useState<string[]>([]);
+  const [loadingImages, setLoadingImages] = useState(false);
 
   const selectedHook = hooks[selectedHookIdx];
   const derivedScript = item.script.startsWith(item.hook)
     ? item.script.replace(item.hook, selectedHook)
     : `${selectedHook}\n\n${item.script}`;
+
+  useEffect(() => {
+    async function fetchImages() {
+      setLoadingImages(true);
+      try {
+        const res = await fetch(`/api/images?topic=${encodeURIComponent(item.metadata.topic)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setImages(data.images || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch images", err);
+      } finally {
+        setLoadingImages(false);
+      }
+    }
+    fetchImages();
+  }, [item.metadata.topic]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -198,6 +218,42 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
               ))}
             </div>
           )}
+
+          {/* B-Roll Images */}
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-3">B-Roll Images</p>
+            {loadingImages ? (
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="w-32 h-20 shrink-0 bg-neutral-100 rounded-lg animate-pulse" />
+                ))}
+              </div>
+            ) : images.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                {images.map((img, i) => (
+                  <div key={i} className="relative group shrink-0 w-32 h-20 rounded-lg overflow-hidden border border-neutral-200">
+                    <img src={img} alt="B-roll" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <a 
+                        href={img} 
+                        download 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="p-1.5 bg-white/20 hover:bg-white/40 rounded-md backdrop-blur-sm transition-colors"
+                        title="Download image"
+                      >
+                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-neutral-400 italic">No images found for this topic.</p>
+            )}
+          </div>
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-1 pb-1">

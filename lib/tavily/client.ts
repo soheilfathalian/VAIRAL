@@ -21,12 +21,14 @@ export type TavilySearchOptions = {
   days?: number;
   include_domains?: string[];
   exclude_domains?: string[];
+  include_images?: boolean;
 };
 
 export async function tavilySearch(opts: TavilySearchOptions): Promise<{
   query: string;
   answer: string | null;
   results: TavilyResult[];
+  images?: string[];
 }> {
   if (!KEY) throw new Error("TAVILY_API_KEY missing in .env");
   const res = await fetch(`${BASE}/search`, {
@@ -41,12 +43,13 @@ export async function tavilySearch(opts: TavilySearchOptions): Promise<{
       days: opts.days,
       include_domains: opts.include_domains,
       exclude_domains: opts.exclude_domains,
+      include_images: opts.include_images,
     }),
   });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Tavily search failed: ${res.status} ${text.slice(0, 200)}`);
   }
-  const data = (await res.json()) as { query: string; answer: string | null; results: TavilyResult[] };
+  const data = (await res.json()) as { query: string; answer: string | null; results: TavilyResult[]; images?: string[] };
   return data;
 }
