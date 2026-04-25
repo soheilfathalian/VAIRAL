@@ -28,6 +28,18 @@ npm run slate or_xxx  # generate for any project_id
 npm run dev           # demo UI on localhost:3000
 ```
 
+## Peec AI reference
+
+Full documentation of the Peec AI tools, MCP, REST API, and concepts — assembled while building Vairal:
+
+- [Concepts](./docs/peec/README.md) — projects, brands, topics, prompts, chats, sources
+- [Metrics](./docs/peec/metrics.md) — visibility, share of voice, sentiment, position
+- [MCP Setup](./docs/peec/mcp-setup.md) — connect to Claude Code, Cursor, etc.
+- [MCP Tools](./docs/peec/mcp-tools.md) — all 27 read + write tools
+- [MCP Prompts](./docs/peec/mcp-prompts.md) — the 7 native slash commands
+- [REST API](./docs/peec/rest-api.md) — endpoints, auth, request shapes
+- [Use Cases](./docs/peec/use-cases.md) — workflow patterns
+
 ## Stack
 
 - TypeScript + Node 22
