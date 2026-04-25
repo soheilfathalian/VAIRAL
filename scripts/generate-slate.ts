@@ -1,12 +1,12 @@
 import "dotenv/config";
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { peec, dateRange } from "../lib/peec/client.js";
-import { resolveProject } from "../lib/peec/projects.js";
-import { headlineInsight } from "../lib/pipeline/insight.js";
-import { hasLLM } from "../lib/llm/client.js";
-import { generateSlate } from "../lib/pipeline/slate.js";
-import type { Slate } from "../lib/pipeline/types.js";
+import { peec, dateRange } from "../lib/peec/client";
+import { resolveProject } from "../lib/peec/projects";
+import { headlineInsight } from "../lib/pipeline/insight";
+import { hasLLM } from "../lib/llm/client";
+import { generateSlate } from "../lib/pipeline/slate";
+import type { Slate } from "../lib/pipeline/types";
 
 const arg = process.argv[2];
 const target = resolveProject(arg);

@@ -1,7 +1,7 @@
-import { peec } from "../peec/client.js";
-import { generateJSON } from "../llm/client.js";
-import type { LongFormBrief } from "./types.js";
-import type { BrandReportRow, Prompt, Topic, UrlReportRow, FanoutQuery } from "../peec/types.js";
+import { peec } from "../peec/client";
+import { generateJSON } from "../llm/client";
+import type { LongFormBrief } from "./types";
+import type { BrandReportRow, Prompt, Topic, UrlReportRow, FanoutQuery } from "../peec/types";
 
 type Args = {
   projectId: string;

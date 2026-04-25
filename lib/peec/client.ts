@@ -3,7 +3,7 @@ import type {
   Brand, BrandReportRow, ChatContent, ChatSummary, DomainReportRow,
   FanoutQuery, Model, Project, Prompt, ReportRequest, Tag, Topic,
   UrlContent, UrlReportRow,
-} from "./types.js";
+} from "./types";
 
 const BASE = process.env.PEEC_BASE_URL ?? "https://api.peec.ai/customer/v1";
 const KEY = process.env.PEEC_API_KEY;

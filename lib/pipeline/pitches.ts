@@ -1,7 +1,7 @@
-import { peec } from "../peec/client.js";
-import { generateJSON } from "../llm/client.js";
-import type { ChannelPitch } from "./types.js";
-import type { UrlReportRow } from "../peec/types.js";
+import { peec } from "../peec/client";
+import { generateJSON } from "../llm/client";
+import type { ChannelPitch } from "./types";
+import type { UrlReportRow } from "../peec/types";
 
 type Args = {
   projectId: string;

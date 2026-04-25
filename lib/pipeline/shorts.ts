@@ -1,7 +1,7 @@
-import { peec } from "../peec/client.js";
-import { generateJSON } from "../llm/client.js";
-import type { ShortScript } from "./types.js";
-import type { BrandReportRow, Topic } from "../peec/types.js";
+import { peec } from "../peec/client";
+import { generateJSON } from "../llm/client";
+import type { ShortScript } from "./types";
+import type { BrandReportRow, Topic } from "../peec/types";
 
 type Args = {
   projectId: string;

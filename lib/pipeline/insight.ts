@@ -1,5 +1,5 @@
-import type { BrandReportRow } from "../peec/types.js";
-import type { Insight } from "./types.js";
+import type { BrandReportRow } from "../peec/types";
+import type { Insight } from "./types";
 
 export function headlineInsight(report: BrandReportRow[], ownBrandName: string): Insight {
   const own = report.find((r) => r.brand.name === ownBrandName);

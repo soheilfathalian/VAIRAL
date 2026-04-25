@@ -1,9 +1,9 @@
-import { peec, dateRange } from "../peec/client.js";
-import { headlineInsight } from "./insight.js";
-import { buildLongFormBrief } from "./long-form.js";
-import { buildShorts } from "./shorts.js";
-import { buildPitches } from "./pitches.js";
-import type { Slate } from "./types.js";
+import { peec, dateRange } from "../peec/client";
+import { headlineInsight } from "./insight";
+import { buildLongFormBrief } from "./long-form";
+import { buildShorts } from "./shorts";
+import { buildPitches } from "./pitches";
+import type { Slate } from "./types";
 
 export async function generateSlate(projectId: string, days = 30): Promise<Slate> {
   const range = dateRange(days);

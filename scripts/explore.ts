@@ -1,4 +1,4 @@
-import { peec, dateRange } from "../lib/peec/client.js";
+import { peec, dateRange } from "../lib/peec/client";
 
 const PROJECT = process.env.PEEC_PROJECT_NOTHING!;
 if (!PROJECT) throw new Error("PEEC_PROJECT_NOTHING missing");

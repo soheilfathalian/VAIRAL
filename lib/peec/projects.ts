@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { peec } from "./client.js";
+import { peec } from "./client";
 
 export type ProjectAlias = { alias: string; id: string; label: string };
 
