@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 
   try {
     const data = await tavilySearch({
-      query: `high quality b-roll or background images for ${topic}`,
+      query: `high quality vertical portrait background images for ${topic} 9:16`,
       include_images: true,
       max_results: 3, // We don't need many search results, just the images
     });

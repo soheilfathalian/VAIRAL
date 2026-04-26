@@ -113,6 +113,7 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
   const [selectedHookIdx, setSelectedHookIdx] = useState(0);
   const [images, setImages] = useState<string[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
+  const [expandedImg, setExpandedImg] = useState<string | null>(null);
 
   const selectedHook = hooks[selectedHookIdx];
   const derivedScript = item.script.startsWith(item.hook)
@@ -225,13 +226,17 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
             {loadingImages ? (
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="w-32 h-20 shrink-0 bg-neutral-100 rounded-lg animate-pulse" />
+                  <div key={i} className="w-24 aspect-[9/16] shrink-0 bg-neutral-100 rounded-lg animate-pulse" />
                 ))}
               </div>
             ) : images.length > 0 ? (
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                 {images.map((img, i) => (
-                  <div key={i} className="relative group shrink-0 w-32 h-20 rounded-lg overflow-hidden border border-neutral-200">
+                  <div 
+                    key={i} 
+                    className="relative group shrink-0 w-24 aspect-[9/16] rounded-lg overflow-hidden border border-neutral-200 cursor-zoom-in"
+                    onClick={() => setExpandedImg(img)}
+                  >
                     <img src={img} alt="B-roll" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <a 
@@ -239,6 +244,7 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
                         download 
                         target="_blank" 
                         rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="p-1.5 bg-white/20 hover:bg-white/40 rounded-md backdrop-blur-sm transition-colors"
                         title="Download image"
                       >
@@ -277,6 +283,35 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
           </div>
         </div>
       </article>
+
+      {/* Expanded Image Lightbox */}
+      {expandedImg && (
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 cursor-zoom-out"
+          onClick={() => setExpandedImg(null)}
+        >
+          <div className="relative max-w-full max-h-full">
+            <img 
+              src={expandedImg} 
+              alt="Expanded B-roll" 
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" 
+            />
+            <a 
+              href={expandedImg} 
+              download 
+              target="_blank" 
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-md transition-colors"
+              title="Download image"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
