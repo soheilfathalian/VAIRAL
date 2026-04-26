@@ -10,7 +10,8 @@
     "slate": "tsx scripts/generate-slate.ts",
     "explore": "tsx scripts/explore.ts",
     "tavily": "tsx scripts/tavily-demo.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepare": "sh scripts/install-hooks.sh"
   },
   "dependencies": {
     "@google/genai": "^0.7.0",

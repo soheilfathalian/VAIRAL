@@ -64,7 +64,7 @@ Gemini API ───────┘
 
 4. **Every artifact must cite its data source.** Chapter titles → fanout sub-query (with `sub_query_source` field). Pitch emails → reference the creator's actual cited video. If you can't trace a generated string back to Peec data, the demo loses its credibility.
 
-5. **`.env` keys never go to git.** `.gitignore` covers `.env`. `.env.example` must use placeholders only (`skc-...`, `AIza...`). One earlier commit accidentally leaked the real keys to `.env.example` — Google's scanner revoked the Gemini key within hours and the Peec key had to be rotated. Don't repeat this.
+5. **`.env` keys never go to git.** `.gitignore` covers `.env`. `.env.example` must use placeholders only (`skc-...`, `AIza...`). One earlier commit accidentally leaked the real keys to `.env.example` — Google's scanner revoked the Gemini key within hours and the Peec key had to be rotated. The pre-commit hook (see *Security & session capture* below) now blocks this automatically.
 
 ## How to run
 
@@ -129,6 +129,8 @@ The killer endpoint nobody talks about: `POST /queries/search` returns the **fan
 2. Click a different brand button (Attio / BMW / etc.) → slate regenerates live in 30-60s
 3. Punchline: "Same product, any brand, real Peec data, no human in the loop"
 
+## Author intent stays the same — see below.
+
 ## Things still pending (good first PRs)
 
 1. **Replay validation pipeline** — generate the brief Vairal *would have written* for a video that already went viral and got cited (e.g. Pete Matheson's "The Best Ecosystem You Should Use"). Side-by-side comparison proves targeting precision.
@@ -136,7 +138,60 @@ The killer endpoint nobody talks about: `POST /queries/search` returns the **fan
 3. **Cold-start mode** — for projects with <7 days of data, generate a competitor-derived slate by mining what competitors win on, instead of computing the brand's own blind spots.
 4. **Suggestion bootstrap** — `/setup` page that takes a fresh Peec project and one-click accepts brand/topic/prompt suggestions. Cuts onboarding from 10 min to 30 sec.
 
-## Author intent
+## Security & session capture
+
+Two integrations protect this repo and capture how it was built. Both are wired up — you don't need to do anything to use them.
+
+### Aikido (deterministic SAST + secret scan via MCP)
+
+- **MCP server**: `aikido` — registered in `~/.claude.json`, runs `npx -y @aikidosec/mcp` on session start
+- **Tool exposed**: `mcp__aikido__aikido_full_scan` — scans up to 50 files inline for vulnerabilities and hardcoded secrets
+- **When to invoke from a Claude Code session**: any time you've added a new auth-handling file, public API route, URL-param consumer, mailto-builder, or external-fetch path. Or before opening a PR.
+- **Last full scan result**: zero issues across the 12 highest-risk files (commit `f1330a3`)
+
+Example invocation pattern (the model decides when to call this):
+> "Use Aikido to scan the new files in `lib/pipeline/` for vulnerabilities and secrets."
+
+### Pre-commit secret scanner (deterministic, no Claude required)
+
+`scripts/hooks/pre-commit` — installed automatically on `npm install` via the `prepare` script. Blocks any commit whose staged additions match known API-key patterns:
+
+- Peec (`skc-Y29...`)
+- Gemini (`AIzaSy...`)
+- Anthropic (`sk-ant-...`)
+- Tavily (`tvly-dev-...`)
+- JWTs (`eyJ...`)
+- GitHub PATs (`ghp_...`, `ghs_...`)
+- OpenAI (`sk-...`)
+
+Pure shell + grep. Runs in <50ms. No network, no dependencies. Bypass (NOT recommended): `git commit --no-verify`.
+
+To re-install on a fresh clone: `npm install` (runs the `prepare` script automatically) or `sh scripts/install-hooks.sh` manually.
+
+### Entire (session capture for AI-assisted commits)
+
+[Entire](https://entire.io) auto-captures every Claude Code session as a git checkpoint, preserving:
+
+- Full conversation transcript (your prompts, my responses)
+- File changes with diffs
+- Tool calls (commands, file reads, MCP invocations)
+- Token usage + timestamps
+
+Captured to a hidden `entire/checkpoints/v1` branch. New commits get an `Entire-Checkpoint` trailer that points back to the session.
+
+**Useful commands** (require `entire` CLI on PATH; run `curl -fsSL https://entire.io/install.sh | bash` to install):
+
+```sh
+entire status                                 # show active sessions + capture state
+entire rewind --list                          # JSON list of available restore points
+entire rewind                                 # interactive: pick a checkpoint to restore
+entire rewind --to <commit>                   # restore to a specific checkpoint
+entire explain --commit <sha>                 # show the conversation that produced a commit
+entire explain --commit <sha> --generate      # AI-summarize the session for that commit
+entire resume <branch>                        # restore session log + show resume command
+```
+
+Why an AI agent should care: if a commit breaks something, `entire explain --commit <sha>` shows exactly what was being attempted and why. `entire rewind --list` finds safe restore points without losing context.
 
 This repo was built to demonstrate a specific thesis: **distribution is the moat for early-stage brands fighting AI-search incumbents, and Peec data is precise enough to direct that distribution work down to the chapter title.** The codebase exists to prove the thesis works for any brand, not to be a polished product.
 

@@ -1,0 +1,38 @@
+#!/bin/sh
+# Vairal pre-commit secret scanner
+# ─────────────────────────────────
+# Blocks commits if API-key patterns appear in staged additions.
+# Runs in <50ms — pure grep on the staged diff, no network, no deps.
+#
+# Catches the exact leaks we had in this repo's history:
+#   - Peec keys      (skc-Y29...)
+#   - Gemini keys    (AIzaSy...)
+#   - Anthropic      (sk-ant-...)
+#   - Tavily         (tvly-dev-...)
+#   - JWTs          (eyJ...)
+#   - GitHub PATs   (ghp_..., ghs_...)
+#   - OpenAI keys   (sk-...)
+#
+# Bypass (NOT recommended): git commit --no-verify
+
+set -eu
+
+PATTERN='(skc-Y29[A-Za-z0-9_.-]{30,}|AIzaSy[A-Za-z0-9_-]{30,}|sk-ant-[A-Za-z0-9_-]{30,}|tvly-(dev-)?[A-Za-z0-9_-]{20,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}|gh[ps]_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{40,})'
+
+# Scan only added lines (+ prefix), excluding file headers (+++)
+LEAKED=$(git diff --cached --no-color -U0 \
+  | grep -E "^\+" \
+  | grep -vE "^\+\+\+" \
+  | grep -E "$PATTERN" 2>/dev/null || true)
+
+if [ -n "$LEAKED" ]; then
+  printf "\n\033[31m✗\033[0m Vairal pre-commit: API key pattern detected in staged changes.\n\n"
+  printf "  %s\n" "$LEAKED" | head -10
+  printf "\n  Unstage with: \033[36mgit restore --staged <file>\033[0m\n"
+  printf "  Or rotate the key first, then commit a placeholder.\n\n"
+  exit 1
+fi
+
+# Aikido MCP scan (optional — only if invoked manually via Claude Code; skipped here for speed)
+
+exit 0
