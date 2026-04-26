@@ -6,6 +6,7 @@ import { generateSmartPlan } from "@/lib/pipeline/planner";
 import { ContentCard } from "./components/ContentDetailView";
 import { PitchCard } from "./components/PitchCard";
 import { GapCard } from "./components/GapCard";
+import { EffectTab } from "./components/EffectTab";
 
 async function loadSlate(): Promise<Slate | null> {
   try {
@@ -101,7 +102,7 @@ export default async function Home() {
 
                   <div className="space-y-4">
                     {dayPlan.items.map((item) => (
-                      <ContentCard key={item.id} item={item} />
+                      <ContentCard key={item.id} item={item} projectId={slate.project_id} brandId={slate.brand.id} />
                     ))}
                   </div>
                 </section>
@@ -153,6 +154,8 @@ export default async function Home() {
               </div>
             </section>
           )}
+
+          <EffectTab projectId={slate.project_id} brandId={slate.brand.id} />
 
           <footer className="mt-20 pt-8 border-t border-neutral-100 flex justify-between items-center text-[10px] text-neutral-400 font-mono uppercase tracking-[0.2em]">
             <span>{plan!.items.length} clips queued this week</span>
