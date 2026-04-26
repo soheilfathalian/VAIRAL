@@ -11,6 +11,8 @@ export function BrandPicker({ currentBrand }: { currentBrand: string }) {
   const [generating, setGenerating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [progress, setProgress] = useState(0);
+
   useEffect(() => {
     let cancelled = false;
     fetch("/api/projects")
@@ -24,8 +26,25 @@ export function BrandPicker({ currentBrand }: { currentBrand: string }) {
     return () => { cancelled = true; };
   }, []);
 
+  // Fake progress bar while generating
+  useEffect(() => {
+    if (!generating) {
+      setProgress(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setProgress((p) => {
+        const remaining = 95 - p;
+        if (remaining <= 1) return 95;
+        return p + remaining * 0.05;
+      });
+    }, 500);
+    return () => clearInterval(interval);
+  }, [generating]);
+
   async function generate(projectId: string) {
     setGenerating(projectId);
+    setProgress(0);
     setError(null);
     try {
       const res = await fetch("/api/generate", {
@@ -35,11 +54,13 @@ export function BrandPicker({ currentBrand }: { currentBrand: string }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
-      router.refresh();
+      setProgress(100);
+      // Wait a tiny bit so the user sees 100% before it refreshes
+      setTimeout(() => router.refresh(), 300);
     } catch (e) {
       setError((e as Error).message);
-    } finally {
       setGenerating(null);
+      setProgress(0);
     }
   }
 
@@ -71,7 +92,7 @@ export function BrandPicker({ currentBrand }: { currentBrand: string }) {
           onChange={(e) => {
             if (e.target.value) generate(e.target.value);
           }}
-          value={currentBrand ? projects.find((p) => p.name === currentBrand)?.id ?? "" : ""}
+          value={currentBrand && !generating ? projects.find((p) => p.name === currentBrand)?.id ?? "" : (generating ?? "")}
           className="w-full max-w-sm px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-sm text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition-all disabled:opacity-50 disabled:cursor-not-allowed appearance-none cursor-pointer"
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
@@ -90,6 +111,25 @@ export function BrandPicker({ currentBrand }: { currentBrand: string }) {
             </option>
           ))}
         </select>
+        
+        {generating && (
+          <div className="mt-4 max-w-sm">
+            <div className="flex justify-between items-center mb-1.5">
+              <span className="text-xs font-medium text-neutral-500">
+                Running 4 Gemini models... this takes ~45s
+              </span>
+              <span className="text-xs font-medium text-neutral-500">
+                {Math.round(progress)}%
+              </span>
+            </div>
+            <div className="w-full bg-neutral-100 rounded-full h-1.5 overflow-hidden">
+              <div 
+                className="bg-accent h-full rounded-full transition-all duration-500 ease-out" 
+                style={{ width: `${progress}%` }} 
+              ></div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

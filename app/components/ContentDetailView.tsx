@@ -172,7 +172,27 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
 
         <div className="px-7 py-6 space-y-7">
           {/* Title */}
-          <h2 className="text-xl font-semibold leading-snug text-ink">{item.title}</h2>
+          <div>
+            <h2 className="text-xl font-semibold leading-snug text-ink">{item.title}</h2>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {item.metadata.is_low_sentiment && (
+                <span className="text-[8px] font-semibold uppercase tracking-wider text-red-500 flex items-center gap-1 bg-red-50 px-2 py-1 rounded-md">
+                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  Combat Low Sentiment
+                </span>
+              )}
+              {item.metadata.is_competitor_attack && !item.metadata.is_low_sentiment && (
+                <span className="text-[8px] font-semibold uppercase tracking-wider text-amber-500 flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-md">
+                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Competitor Attack
+                </span>
+              )}
+            </div>
+          </div>
 
           {/* Hook carousel */}
           <HookCarousel hooks={hooks} selectedIdx={selectedHookIdx} onSelect={setSelectedHookIdx} />
@@ -254,7 +274,7 @@ export function ContentCard({ item }: { item: ContentItem }) {
     <>
       <article
         id={`content-card-${item.id}`}
-        className={`group relative rounded-2xl border p-5 bg-white transition-all flex flex-col h-56 ${
+        className={`group relative rounded-2xl border px-4 py-3.5 bg-white transition-all flex flex-col h-40 ${
           done
             ? "border-neutral-100 opacity-50"
             : "border-neutral-200 hover:border-accent hover:shadow-[0_10px_30px_-10px_rgba(99,102,241,0.2)]"
@@ -288,23 +308,23 @@ export function ContentCard({ item }: { item: ContentItem }) {
         <button
           id={`content-card-title-${item.id}`}
           onClick={() => setOpen(true)}
-          className={`mt-4 text-left text-xs font-semibold leading-relaxed transition-colors line-clamp-3 hover:underline underline-offset-2 ${
+          className={`mt-2 text-left text-xs font-semibold leading-snug transition-colors line-clamp-2 hover:underline underline-offset-2 ${
             done ? "line-through text-neutral-400" : "text-ink group-hover:text-accent"
           }`}
         >
           {item.title}
         </button>
 
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-1.5 flex items-center gap-1.5">
           {item.metadata.platforms.map((p) => (
             <PlatformIcon key={p} platform={p} />
           ))}
         </div>
 
         {item.metadata.is_low_sentiment && (
-          <div className="mt-3">
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-red-500 flex items-center gap-1.5">
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <div className="mt-1.5">
+            <span className="text-[8px] font-semibold uppercase tracking-wider text-red-500 flex items-center gap-1">
+              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               Combat Low Sentiment
@@ -312,8 +332,19 @@ export function ContentCard({ item }: { item: ContentItem }) {
           </div>
         )}
 
+        {item.metadata.is_competitor_attack && !item.metadata.is_low_sentiment && (
+          <div className="mt-1.5">
+            <span className="text-[8px] font-semibold uppercase tracking-wider text-amber-500 flex items-center gap-1">
+              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Competitor Attack
+            </span>
+          </div>
+        )}
+
         {!done && (
-          <div className="mt-auto pt-4 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
+          <div className="mt-auto pt-2 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
             <Link
               href={`/teleprompter?script=${encodeURIComponent(item.script)}`}
               className="inline-flex items-center gap-1 text-[10px] font-bold text-accent uppercase tracking-wider"

@@ -111,6 +111,7 @@ export type ContentItem = {
     platforms: Array<'YOUTUBE' | 'TIKTOK' | 'INSTAGRAM' | 'X' | 'REDDIT'>;
     is_urgent?: boolean;
     is_low_sentiment?: boolean;
+    is_competitor_attack?: boolean;
   };
 };
 

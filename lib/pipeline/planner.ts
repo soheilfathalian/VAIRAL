@@ -26,24 +26,10 @@ export function generateSmartPlan(slate: Slate): WeeklyContentPlan {
         hashtags: s.hashtags,
         platforms: ["YOUTUBE", "TIKTOK", "INSTAGRAM"] as ("YOUTUBE" | "TIKTOK" | "INSTAGRAM" | "X")[],
         is_urgent: isNews,
+        is_competitor_attack: true,
       },
     };
   });
-
-  // B. Gap Analysis Actions (surfacing missing domains as actionable pitch items)
-  const gapItems = (slate.gap_analysis?.gaps || []).map((gap) => ({
-    type: "PITCH_PROMO" as const,
-    title: `Gap: ${gap.domain}`,
-    hook: `Recommended action: ${gap.recommended_action}`,
-    script: `Format: ${gap.content_format}\nCompetitors present: ${gap.competitors_present.join(
-      ", "
-    )}\n\nAction: Execute distribution play on ${gap.domain}.`,
-    metadata: {
-      topic: "Distribution",
-      hashtags: [gap.classification],
-      platforms: [] as ("YOUTUBE" | "TIKTOK" | "INSTAGRAM" | "X")[],
-    },
-  }));
 
   // C. Competitor Remixes (counter-narrative content)
   const remixItems = (slate.remixes || []).map((r) => ({
@@ -74,13 +60,21 @@ export function generateSmartPlan(slate: Slate): WeeklyContentPlan {
   }));
 
   // 2. Build prioritized queues
-  // We want to guarantee at least one Short per day.
-  const shortsQueue = [
-    ...lowSentimentItems,
+  const shortsQueue: any[] = [];
+  const lowSent = [...lowSentimentItems];
+  const attacks = [
     ...shortItems.filter((s) => s.metadata.is_urgent),
     ...shortItems.filter((s) => !s.metadata.is_urgent),
   ];
-  const otherQueue = [...gapItems, ...remixItems];
+
+  // Interleave to spread them out
+  while (lowSent.length > 0 || attacks.length > 0) {
+    if (lowSent.length > 0) shortsQueue.push(lowSent.shift()!);
+    if (attacks.length > 0) shortsQueue.push(attacks.shift()!);
+  }
+
+  const otherQueue = [...remixItems];
+  const masterQueue = [...shortsQueue, ...otherQueue];
 
   // Find Thursday (0 = Sunday, 1 = Monday, ..., 4 = Thursday)
   let thursdayOffset = 0;
@@ -153,35 +147,73 @@ export function generateSmartPlan(slate: Slate): WeeklyContentPlan {
   }
 
   // B. Distribute remaining days
-  // We guarantee 1 Short in the morning, and 1 Gap/Remix in the afternoon.
-  for (let d = 0; d < 7; d++) {
-    if (scheduledDays.has(d)) continue;
+  const availableDays = [0, 1, 2, 3, 4, 5, 6].filter(d => !scheduledDays.has(d));
+  
+  const assignedPerDay = new Map<number, any[]>();
+  for (const d of availableDays) assignedPerDay.set(d, []);
 
-    const dStart = new Date(start);
-    dStart.setDate(dStart.getDate() + d);
-
-    // Morning Slot (9:00) -> Pull from shorts first
-    const morningItem = shortsQueue.shift() || otherQueue.shift();
-    if (morningItem) {
-      const d1 = new Date(dStart);
-      d1.setHours(9, 0, 0, 0);
-      items.push({
-        ...morningItem,
-        id: `item_${d}_0`,
-        scheduled_at: d1.toISOString(),
-        status: "PLANNED",
-      });
+  // First pass: 1 item per day to guarantee daily cadence
+  for (const d of availableDays) {
+    if (masterQueue.length > 0) {
+      assignedPerDay.get(d)!.push(masterQueue.shift()!);
     }
+  }
 
-    // Afternoon Slot (16:00) -> Pull from Gaps/Remixes first
-    const afternoonItem = otherQueue.shift() || shortsQueue.shift();
-    if (afternoonItem) {
-      const d2 = new Date(dStart);
-      d2.setHours(16, 0, 0, 0);
+  // Second pass: distribute remaining, avoiding same type on same day
+  while (masterQueue.length > 0) {
+    const item = masterQueue.shift()!;
+    let bestDay = availableDays[0];
+    let bestScore = -1000;
+
+    for (const d of availableDays) {
+      const dayItems = assignedPerDay.get(d)!;
+      const countScore = -dayItems.length * 10; // prefer days with fewer items
+      
+      const hasSameType = dayItems.some(
+        (i: any) => (i.metadata.is_low_sentiment === (item.metadata as any).is_low_sentiment) && 
+             (i.metadata.is_competitor_attack === (item.metadata as any).is_competitor_attack)
+      );
+      const typeScore = hasSameType ? -5 : 0;
+      
+      const dStart = new Date(start);
+      dStart.setDate(dStart.getDate() + d);
+      const isWeekend = dStart.getDay() === 0 || dStart.getDay() === 6;
+      // Heavy penalty for assigning a second item to a weekend
+      const weekendPenalty = (dayItems.length > 0 && isWeekend) ? -20 : 0;
+      
+      const score = countScore + typeScore + weekendPenalty;
+      if (score > bestScore) {
+        bestScore = score;
+        bestDay = d;
+      }
+    }
+    
+    assignedPerDay.get(bestDay)!.push(item);
+  }
+
+  // Convert map to final schedule
+  for (const d of availableDays) {
+    const dayItems = assignedPerDay.get(d)!;
+    
+    // Sort so Combat Low Sentiment comes first
+    dayItems.sort((a, b) => {
+      const aLow = (a.metadata as any).is_low_sentiment ? 1 : 0;
+      const bLow = (b.metadata as any).is_low_sentiment ? 1 : 0;
+      return bLow - aLow; // 1 before 0
+    });
+
+    for (let idx = 0; idx < dayItems.length; idx++) {
+      const item = dayItems[idx];
+      const dStart = new Date(start);
+      dStart.setDate(dStart.getDate() + d);
+      
+      const hours = [9, 13, 18];
+      dStart.setHours(hours[Math.min(idx, 2)], 0, 0, 0);
+
       items.push({
-        ...afternoonItem,
-        id: `item_${d}_1`,
-        scheduled_at: d2.toISOString(),
+        ...item,
+        id: `item_${d}_${idx}`,
+        scheduled_at: dStart.toISOString(),
         status: "PLANNED",
       });
     }
