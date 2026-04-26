@@ -252,17 +252,17 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
             ) : images.length > 0 ? (
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                 {images.map((img, i) => (
-                  <div 
-                    key={i} 
+                  <div
+                    key={i}
                     className="relative group shrink-0 w-24 aspect-[9/16] rounded-lg overflow-hidden border border-neutral-200 cursor-zoom-in"
                     onClick={() => setExpandedImg(img)}
                   >
                     <img src={img} alt="B-roll" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <a 
-                        href={img} 
-                        download 
-                        target="_blank" 
+                      <a
+                        href={img}
+                        download
+                        target="_blank"
                         rel="noreferrer"
                         onClick={(e) => e.stopPropagation()}
                         className="p-1.5 bg-white/20 hover:bg-white/40 rounded-md backdrop-blur-sm transition-colors"
@@ -306,20 +306,20 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
 
       {/* Expanded Image Lightbox */}
       {expandedImg && (
-        <div 
+        <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 cursor-zoom-out"
           onClick={() => setExpandedImg(null)}
         >
           <div className="relative max-w-full max-h-full">
-            <img 
-              src={expandedImg} 
-              alt="Expanded B-roll" 
-              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" 
+            <img
+              src={expandedImg}
+              alt="Expanded B-roll"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
             />
-            <a 
-              href={expandedImg} 
-              download 
-              target="_blank" 
+            <a
+              href={expandedImg}
+              download
+              target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}
               className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-md transition-colors"
@@ -337,7 +337,15 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
 }
 
 // ── ContentCard ───────────────────────────────────────────────────────────────
-export function ContentCard({ item, projectId }: { item: ContentItem; projectId: string }) {
+export function ContentCard({
+  item,
+  projectId,
+  brandId,
+}: {
+  item: ContentItem;
+  projectId: string;
+  brandId: string;
+}) {
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -353,14 +361,15 @@ export function ContentCard({ item, projectId }: { item: ContentItem; projectId:
     setDone(next);
     localStorage.setItem(`done:${item.id}`, next ? "1" : "0");
 
-    // Post prompt to capture the impact of the video over the next month
-    // We check a separate flag to ensure this only happens exactly once per item
+    // Post prompt to Peec and store data for impact tracking.
+    // Guard on prompt_data key (not an old prompt_posted flag) so items
+    // checked before this feature existed will re-post on the next toggle.
     if (next) {
-      const postedFlag = `prompt_posted:${item.id}`;
-      if (localStorage.getItem(postedFlag) === "1") return;
+      const dataKey = `prompt_data:${item.id}`;
+      if (localStorage.getItem(dataKey)) return; // already tracked
 
       try {
-        await fetch("/api/prompts", {
+        const res = await fetch("/api/prompts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -368,7 +377,20 @@ export function ContentCard({ item, projectId }: { item: ContentItem; projectId:
             text: `What is the latest on ${item.metadata.topic}? Is it true that ${item.hook}?`,
           }),
         });
-        localStorage.setItem(postedFlag, "1");
+        if (res.ok) {
+          const result = await res.json();
+          // Store full data so EffectTab can track AI impact over time
+          localStorage.setItem(
+            dataKey,
+            JSON.stringify({
+              promptId: result.id,
+              postedAt: new Date().toISOString(),
+              item,
+              projectId,
+              brandId,
+            })
+          );
+        }
       } catch (err) {
         console.error("Failed to post prompt", err);
       }
