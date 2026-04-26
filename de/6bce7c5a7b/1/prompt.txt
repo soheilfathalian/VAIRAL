@@ -1,0 +1,11 @@
+push everything
+
+---
+
+<task-notification>
+<task-id>bdx0dn8e9</task-id>
+<tool-use-id>toolu_01DF4gAN36LDFjjTE33RgJAa</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-soheilfathalian-vairal/b71485ba-0aee-4e4c-a1f6-86b7e2bf1b64/tasks/bdx0dn8e9.output</output-file>
+<status>killed</status>
+<summary>Background command "Start Next.js dev server" was stopped</summary>
+</task-notification>
