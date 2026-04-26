@@ -80,6 +80,21 @@ export async function generateJSON<T>(opts: {
   try {
     return JSON.parse(cleaned) as T;
   } catch (e) {
+    // Truncation recovery: if the response looks like a JSON array that was cut
+    // off mid-stream, extract all fully-closed objects and parse those.
+    if (cleaned.startsWith("[")) {
+      const objects: unknown[] = [];
+      // Match top-level {...} blocks (handles nesting up to ~5 levels)
+      const re = /\{(?:[^{}]|\{(?:[^{}]|\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})*\})*\}/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(cleaned)) !== null) {
+        try { objects.push(JSON.parse(m[0])); } catch { /* skip malformed fragment */ }
+      }
+      if (objects.length > 0) {
+        console.warn(`[llm] ${modelUsed} response was truncated — recovered ${objects.length} complete object(s)`);
+        return objects as T;
+      }
+    }
     throw new Error(
       `Gemini (${modelUsed}) returned non-JSON:\n${text.slice(0, 500)}\n\nParse error: ${(e as Error).message}`
     );

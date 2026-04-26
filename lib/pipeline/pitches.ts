@@ -47,6 +47,7 @@ export async function buildPitches(args: Args): Promise<ChannelPitch[]> {
   return generateJSON<ChannelPitch[]>({
     system: pitchesSystem(ownBrandName),
     user: JSON.stringify({ brand: ownBrandName, candidates: ranked }, null, 2),
+    maxTokens: 16384,
   });
 }
 
@@ -66,7 +67,7 @@ Output must be a JSON array, one object per candidate, matching:
   },
   "pitch_angle": "string — one sentence on the unique angle for this specific creator (their style, audience, recent video)",
   "email_subject": "string — under 60 chars, specific, no clickbait",
-  "email_body": "string — 4-6 short paragraphs. Opens by referencing one of their actual cited videos. Proposes ONE concrete collaboration (guest appearance, product loan, joint video). Ends with a low-friction CTA."
+  "email_body": "string — exactly 3 short paragraphs (max 60 words each). Para 1: reference one of their actual cited videos and why it resonated. Para 2: propose ONE concrete collaboration (guest appearance, product loan, joint video). Para 3: low-friction CTA with a single question."
 }
 
 Tone: genuine peer-to-peer, no marketer-speak. No 'I hope this email finds you well'. No 'I'm reaching out because'. Get to the point.
