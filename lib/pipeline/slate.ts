@@ -32,8 +32,9 @@ export async function generateSlate(projectId: string, days = 30): Promise<Slate
     console.warn(`[slate] No is_own brand in project ${projectId}, falling back to first brand: ${own.name}`);
   }
 
-  // Pure computation — no extra API call, domain report already fetched above
-  const gapAnalysis = computeGapAnalysis(domainReport, own, brands);
+  // Run gap analysis via LLM
+  console.log(`[slate] Computing source gaps (with LLM validation)...`);
+  const gapAnalysis = await computeGapAnalysis(domainReport, own, brands);
 
   console.log(`\n[slate] Brand: ${own.name}`);
   console.log(`[slate] Topics: ${topics.length} · Brands tracked: ${brands.length} · Brand report rows: ${brandReport.length}`);

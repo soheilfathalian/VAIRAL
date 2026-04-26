@@ -1,9 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Slate } from "@/lib/pipeline/types";
+import type { Slate, SourceGap } from "@/lib/pipeline/types";
 import { BrandPicker } from "./components/BrandPicker";
-import Link from "next/link";
-
+import { generateSmartPlan } from "@/lib/pipeline/planner";
+import { ContentCard } from "./components/ContentDetailView";
+import { PitchCard } from "./components/PitchCard";
+import { GapCard } from "./components/GapCard";
 
 async function loadSlate(): Promise<Slate | null> {
   try {
@@ -16,6 +18,7 @@ async function loadSlate(): Promise<Slate | null> {
 
 export const dynamic = "force-dynamic";
 
+
 function Header() {
   return (
     <header className="flex justify-between items-end">
@@ -26,12 +29,6 @@ function Header() {
           Pick an underdog brand. Vairal pulls how AI engines talk about it (via Peec AI), then ships a week of UGC video production: long-form for citation, shorts for reach, channel pitches for compounding.
         </p>
       </div>
-      <Link href="/content-plan" className="mb-1 font-mono text-xs uppercase tracking-widest text-neutral-400 hover:text-accent transition-colors flex items-center gap-2">
-        View Content Plan
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      </Link>
     </header>
   );
 }
@@ -39,8 +36,29 @@ function Header() {
 export default async function Home() {
   const slate = await loadSlate();
 
+  let plan: any;
+  let gaps: SourceGap[] = [];
+  let maxGapScore = 0;
+  let dailyPlans: { date: Date; items: any[] }[] = [];
+
+  if (slate) {
+    plan = generateSmartPlan(slate);
+    gaps = slate.gap_analysis?.gaps ?? [];
+    maxGapScore = gaps.reduce((m, g) => Math.max(m, g.gap_score), 0);
+
+    dailyPlans = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toDateString();
+      return {
+        date,
+        items: plan!.items.filter((item: any) => new Date(item.scheduled_at).toDateString() === dateStr),
+      };
+    });
+  }
+
   return (
-    <main className="min-h-screen px-8 py-16 max-w-5xl mx-auto">
+    <main className="min-h-screen px-8 py-16 max-w-7xl mx-auto">
       <Header />
       <BrandPicker currentBrand={slate?.brand.name ?? ""} />
 
@@ -52,123 +70,96 @@ export default async function Home() {
         </div>
       ) : (
         <>
-          <Insight slate={slate} />
-          <Shorts slate={slate} />
-          <Pitches slate={slate} />
-          <Footer slate={slate} />
+
+
+          <section className="mt-16">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-6">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-400 font-bold">📅 Weekly Schedule</p>
+                <h2 className="mt-1 text-2xl font-semibold text-ink">Content Calendar</h2>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <div className="bg-white border border-neutral-200 px-6 py-3 rounded-2xl shadow-sm flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                  <span className="font-mono text-xs font-semibold uppercase tracking-widest text-ink">
+                    {dailyPlans[0].date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {dailyPlans[6].date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                </div>
+                <p className="text-[10px] uppercase tracking-widest text-neutral-400 font-mono">Algorithm: Vairal v1.0 Smart Distro</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-6">
+              {dailyPlans.map((dayPlan, i) => (
+                <section key={i} className="flex flex-col gap-6">
+                  <div className="flex flex-col items-center py-4 rounded-2xl bg-neutral-50/50 border border-neutral-100">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-400">
+                      {dayPlan.date.toLocaleDateString('en-US', { weekday: 'short' })}
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-ink">{dayPlan.date.getDate()}</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    {dayPlan.items.map((item) => (
+                      <ContentCard key={item.id} item={item} />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </section>
+
+          {gaps.length > 0 && (
+            <section className="mt-16">
+              <div className="flex items-end justify-between mb-6">
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-red-500 font-bold">🔴 Source Gaps</p>
+                  <h2 className="mt-1 text-2xl font-semibold text-ink">
+                    {gaps.length} high-trust domains — competitors cited, you&apos;re not
+                  </h2>
+                  {slate.gap_analysis?.summary && (
+                    <p className="mt-1 text-sm text-neutral-500 max-w-2xl">{slate.gap_analysis.summary}</p>
+                  )}
+                </div>
+                <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 shrink-0">
+                  {slate.gap_analysis?.total_gaps_found ?? gaps.length} total gaps · showing top {gaps.length}
+                </span>
+              </div>
+              <div className="space-y-4">
+                {gaps.map((gap, i) => (
+                  <GapCard key={gap.domain} gap={gap} max={maxGapScore} rank={i + 1} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {slate.pitches && slate.pitches.length > 0 && (
+            <section className="mt-16">
+              <div className="flex items-end justify-between mb-6">
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-400 font-bold">✉️ Creator Outreach</p>
+                  <h2 className="mt-1 text-2xl font-semibold text-ink">YouTube Channel Pitches</h2>
+                  <p className="mt-1 text-sm text-neutral-500">Top channels currently cited by AI engines — ranked by retrievals + citations.</p>
+                </div>
+                <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 shrink-0">
+                  {slate.pitches.length} channel{slate.pitches.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                {slate.pitches.map((pitch, i) => (
+                  <PitchCard key={pitch.channel_title} pitch={pitch} rank={i + 1} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          <footer className="mt-20 pt-8 border-t border-neutral-100 flex justify-between items-center text-[10px] text-neutral-400 font-mono uppercase tracking-[0.2em]">
+            <span>Total Production: {plan!.items.length} Clips / Week</span>
+            <span>Plan Generated: {new Date(plan!.generated_at).toLocaleString()}</span>
+          </footer>
         </>
       )}
     </main>
-  );
-}
-
-function Insight({ slate }: { slate: Slate }) {
-  const i = slate.headline_insight;
-  return (
-    <section className="mt-10 rounded-2xl bg-ink text-paper p-8">
-      <p className="font-mono text-xs uppercase tracking-widest text-neutral-400">Headline insight · {slate.brand.name}</p>
-      <h2 className="mt-3 text-3xl font-semibold leading-tight">{i.headline}</h2>
-      <p className="mt-3 text-neutral-300">{i.subhead}</p>
-      <dl className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {i.evidence.map((e) => (
-          <div key={e.metric}>
-            <dt className="font-mono text-xs uppercase text-neutral-400">{e.metric}</dt>
-            <dd className="mt-1 text-2xl font-semibold">{e.value}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
-}
-
-
-function Shorts({ slate }: { slate: Slate }) {
-  if (slate.shorts.length === 0) {
-    return (
-      <section className="mt-10">
-        <SectionTitle label="Track B · Shorts scripts" topic="3 hot takes targeting competitor wedges" />
-        <p className="mt-4 text-neutral-500 text-sm">Awaiting Gemini generation.</p>
-      </section>
-    );
-  }
-  return (
-    <section className="mt-10">
-      <SectionTitle label="Track B · Shorts scripts" topic="3 hot takes targeting competitor wedges" />
-      <div className="mt-4 grid md:grid-cols-3 gap-4">
-        {slate.shorts.map((s, i) => (
-          <article key={i} className="rounded-2xl border border-neutral-200 p-6 bg-white flex flex-col">
-            <p className="font-mono text-xs uppercase tracking-widest text-neutral-500">vs {s.competitor_wedge.name}</p>
-            <p className="mt-1 text-sm text-neutral-500">{s.competitor_wedge.weak_topic} · sentiment {s.competitor_wedge.sentiment}</p>
-            <p className="mt-4 font-semibold">{s.hook}</p>
-            <p className="mt-3 text-sm text-neutral-700">{s.claim}</p>
-            <p className="mt-3 text-sm text-neutral-700">{s.payoff}</p>
-            <div className="mt-4 flex flex-wrap gap-1">
-              {s.hashtags.map((h, j) => <span key={j} className="text-xs text-accent">{h}</span>)}
-            </div>
-            
-            <div className="mt-auto pt-6">
-              <Link 
-                href={`/teleprompter?script=${encodeURIComponent(`${s.hook} ${s.claim} ${s.payoff}`)}`}
-                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink bg-paper border border-neutral-200 px-4 py-2 rounded-full hover:bg-neutral-100 transition-colors w-full justify-center"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-                Record Video
-              </Link>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function Pitches({ slate }: { slate: Slate }) {
-  if (slate.pitches.length === 0) return null;
-  return (
-    <section className="mt-10">
-      <SectionTitle label="Track C · Channel pitch list" topic="Top YouTube channels currently cited by AI engines" />
-      <div className="mt-4 space-y-4">
-        {slate.pitches.map((p) => (
-          <article key={p.channel_title} className="rounded-2xl border border-neutral-200 p-6 bg-white">
-            <div className="flex justify-between items-start gap-4">
-              <div>
-                <h3 className="text-lg font-semibold">{p.channel_title}</h3>
-                <p className="text-xs text-neutral-500 mt-1">
-                  {p.why_it_matters.retrievals} retrievals · {p.why_it_matters.citation_count} citations · sample: <em>{p.why_it_matters.sample_video}</em>
-                </p>
-              </div>
-            </div>
-            {p.pitch_angle && <p className="mt-3 text-sm text-neutral-700"><strong>Angle:</strong> {p.pitch_angle}</p>}
-            {p.email_subject && (
-              <div className="mt-4 rounded-lg bg-neutral-50 p-4">
-                <p className="font-mono text-xs text-neutral-500">SUBJECT</p>
-                <p className="font-medium">{p.email_subject}</p>
-                <p className="font-mono text-xs text-neutral-500 mt-3">BODY</p>
-                <p className="text-sm whitespace-pre-wrap text-neutral-700">{p.email_body}</p>
-              </div>
-            )}
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function SectionTitle({ label, topic }: { label: string; topic: string }) {
-  return (
-    <div>
-      <p className="font-mono text-xs uppercase tracking-widest text-neutral-500">{label}</p>
-      <p className="text-neutral-700 mt-1">{topic}</p>
-    </div>
-  );
-}
-
-function Footer({ slate }: { slate: Slate }) {
-  return (
-    <footer className="mt-16 pt-8 border-t border-neutral-200 text-xs text-neutral-500 font-mono">
-      Generated {new Date(slate.generated_at).toLocaleString()} · window {slate.date_range.start_date} → {slate.date_range.end_date} · project {slate.project_id}
-    </footer>
   );
 }

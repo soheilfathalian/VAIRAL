@@ -61,7 +61,7 @@ async function dataOnlySlate(projectId: string): Promise<Slate> {
     remixes: [],
     qna_clusters: [],
     low_sentiment_shorts: [],
-    gap_analysis: computeGapAnalysis(domainReport, own, brands),
+    gap_analysis: await computeGapAnalysis(domainReport, own, brands),
   };
 }
 
