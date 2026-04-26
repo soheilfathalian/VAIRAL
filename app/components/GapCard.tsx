@@ -90,6 +90,7 @@ export function GapCard({ gap, max, rank }: { gap: SourceGap; max: number; rank:
           </span>
         ))}
         <span className="text-neutral-200 mx-1">·</span>
+        <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400">Priority:</span>
         <span className={`font-mono text-[9px] font-bold uppercase tracking-widest ${urgencyColor}`}>{urgency}</span>
         <div className="w-20">
           <UrgencyBar score={gap.gap_score} max={max} />
