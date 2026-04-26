@@ -354,7 +354,11 @@ export function ContentCard({ item, projectId }: { item: ContentItem; projectId:
     localStorage.setItem(`done:${item.id}`, next ? "1" : "0");
 
     // Post prompt to capture the impact of the video over the next month
+    // We check a separate flag to ensure this only happens exactly once per item
     if (next) {
+      const postedFlag = `prompt_posted:${item.id}`;
+      if (localStorage.getItem(postedFlag) === "1") return;
+
       try {
         await fetch("/api/prompts", {
           method: "POST",
@@ -364,6 +368,7 @@ export function ContentCard({ item, projectId }: { item: ContentItem; projectId:
             text: `What is the latest on ${item.metadata.topic}? Is it true that ${item.hook}?`,
           }),
         });
+        localStorage.setItem(postedFlag, "1");
       } catch (err) {
         console.error("Failed to post prompt", err);
       }
