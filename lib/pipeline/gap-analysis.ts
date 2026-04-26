@@ -1,5 +1,6 @@
 import type { DomainReportRow, Brand } from "../peec/types";
 import type { SourceGap, GapAnalysis } from "./types";
+import { generateJSON } from "../llm/client";
 
 // Map Peec's domain classifications to actionable content types
 const ACTION_MAP: Record<string, { action: string; format: string }> = {
@@ -36,11 +37,11 @@ const ACTION_MAP: Record<string, { action: string; format: string }> = {
  * Gap Score = retrieved_percentage × citation_rate × competitor_count
  * (higher = more urgent to close the gap)
  */
-export function computeGapAnalysis(
+export async function computeGapAnalysis(
   domainReport: DomainReportRow[],
   ownBrand: Brand,
   allBrands: Brand[]
-): GapAnalysis {
+): Promise<GapAnalysis> {
   const ownId = ownBrand.id;
 
   const gaps: SourceGap[] = [];
@@ -85,11 +86,45 @@ export function computeGapAnalysis(
   // Sort by urgency — highest gap score first
   gaps.sort((a, b) => b.gap_score - a.gap_score);
 
-  const top = gaps.slice(0, 5);
+  const candidates = gaps.slice(0, 15); // get top 15 candidates to judge
+
+  if (candidates.length === 0) {
+    return { gaps: [], total_gaps_found: 0, summary: buildSummary([], ownBrand.name) };
+  }
+
+  // LLM Judge to filter out competitor-owned or irrelevant domains
+  const systemPrompt = `You are a strict outreach strategist for the brand "${ownBrand.name}".
+Your job is to review a list of domains where AI engines cite your competitors but NOT you.
+You must return a JSON array containing ONLY the domains that make sense to legitimately pitch, partner with, or list on.
+
+CRITICAL RULES FOR REJECTION:
+1. REJECT if the domain is owned by a direct competitor (e.g., 'samsung.com', 'apple.com', or 'huawei.com' if you are a phone brand). You cannot pitch your competitor's own website.
+2. REJECT if the domain is a broad marketplace/retailer where a PR pitch makes no sense (e.g., 'amazon.com').
+3. REJECT if the domain is fundamentally unpitchable for PR/Partnerships.
+
+Return a JSON array of strings containing ONLY the approved domains.
+Example output: ["whathifi.com", "rtings.com", "theverge.com"]
+Output ONLY the JSON array, no markdown fences.`;
+
+  let approvedDomains: string[] = [];
+  try {
+    approvedDomains = await generateJSON<string[]>({
+      system: systemPrompt,
+      user: JSON.stringify(candidates.map(c => c.domain)),
+      temperature: 0.1,
+    });
+  } catch (error) {
+    console.warn("[gap-analysis] LLM judge failed, falling back to unfiltered list:", error);
+    approvedDomains = candidates.map(c => c.domain);
+  }
+
+  const validSet = new Set(approvedDomains);
+  const filteredGaps = candidates.filter(g => validSet.has(g.domain));
+  const top = filteredGaps.slice(0, 5);
 
   return {
     gaps: top,
-    total_gaps_found: gaps.length,
+    total_gaps_found: filteredGaps.length,
     summary: buildSummary(top, ownBrand.name),
   };
 }

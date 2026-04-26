@@ -34,6 +34,7 @@ export function BrandPicker({ currentBrand }: { currentBrand: string }) {
     }
     const interval = setInterval(() => {
       setProgress((p) => {
+        if (p >= 100) return 100;
         const remaining = 95 - p;
         if (remaining <= 1) return 95;
         return p + remaining * 0.05;
@@ -56,7 +57,10 @@ export function BrandPicker({ currentBrand }: { currentBrand: string }) {
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
       setProgress(100);
       // Wait a tiny bit so the user sees 100% before it refreshes
-      setTimeout(() => router.refresh(), 300);
+      setTimeout(() => {
+        setGenerating(null);
+        router.refresh();
+      }, 500);
     } catch (e) {
       setError((e as Error).message);
       setGenerating(null);
