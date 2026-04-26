@@ -114,6 +114,7 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
   const [images, setImages] = useState<string[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
   const [expandedImg, setExpandedImg] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const selectedHook = hooks[selectedHookIdx];
   const derivedScript = item.script.startsWith(item.hook)
@@ -277,7 +278,7 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-neutral-400 italic">No images found for this topic.</p>
+              <p className="text-xs text-neutral-500">No b-roll for this topic — record any general shots and the script carries the rest.</p>
             )}
           </div>
 
@@ -295,10 +296,16 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
             </Link>
             <button
               id="content-detail-copy"
-              onClick={() => navigator.clipboard.writeText(derivedScript)}
-              className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 hover:text-neutral-700 transition-colors"
+              onClick={() => {
+                navigator.clipboard.writeText(derivedScript);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }}
+              className={`font-mono text-[10px] uppercase tracking-widest transition-colors ${
+                copied ? "text-emerald-500" : "text-neutral-400 hover:text-neutral-700"
+              }`}
             >
-              Copy Script
+              {copied ? "Copied" : "Copy Script"}
             </button>
           </div>
         </div>

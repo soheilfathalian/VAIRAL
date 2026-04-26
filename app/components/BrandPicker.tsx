@@ -5,6 +5,18 @@ import { useRouter } from "next/navigation";
 
 type ProjectInfo = { id: string; name: string; status: string };
 
+// Map fake-progress percentage to a stage label so the user feels time passing
+// instead of staring at the same string for 45 seconds. Stages are tuned to
+// roughly match the order of work in lib/pipeline/slate.ts.
+function progressStage(progress: number): string {
+  if (progress < 15) return "Pulling Peec data…";
+  if (progress < 30) return "Reading where the brand stands…";
+  if (progress < 50) return "Picking competitor wedges…";
+  if (progress < 70) return "Drafting Shorts and pitches…";
+  if (progress < 90) return "Adding remixes and combat shorts…";
+  return "Wrapping up…";
+}
+
 export function BrandPicker({ currentBrand }: { currentBrand: string }) {
   const router = useRouter();
   const [projects, setProjects] = useState<ProjectInfo[] | null>(null);
@@ -70,14 +82,22 @@ export function BrandPicker({ currentBrand }: { currentBrand: string }) {
 
   if (!projects) {
     return (
-      <div className="mt-8 text-sm text-neutral-500 font-mono">Loading projects from Peec…</div>
+      <div className="mt-8 text-sm text-neutral-500 font-mono">Pulling your Peec projects…</div>
     );
   }
 
   if (projects.length === 0) {
     return (
       <div className="mt-8 text-sm text-neutral-500">
-        No Peec projects accessible to this API key. Create one in the Peec dashboard.
+        This API key doesn&apos;t see any projects yet.{" "}
+        <a
+          href="https://app.peec.ai"
+          target="_blank"
+          rel="noreferrer"
+          className="text-accent underline underline-offset-2 hover:text-ink transition-colors"
+        >
+          Open the Peec dashboard →
+        </a>
       </div>
     );
   }
@@ -86,9 +106,13 @@ export function BrandPicker({ currentBrand }: { currentBrand: string }) {
     <div className="mt-8">
       <div className="flex items-center gap-3 mb-3">
         <span className="font-mono text-xs uppercase tracking-widest text-neutral-500">
-          Generate slate for ({projects.length} projects available)
+          Pick a brand · {projects.length} project{projects.length === 1 ? "" : "s"} available
         </span>
-        {error && <span className="text-sm text-red-600">⚠ {error}</span>}
+        {error && (
+          <span className="text-sm text-red-600">
+            Couldn&apos;t generate the slate — {error}
+          </span>
+        )}
       </div>
       <div className="mt-2">
         <select
@@ -119,10 +143,10 @@ export function BrandPicker({ currentBrand }: { currentBrand: string }) {
         {generating && (
           <div className="mt-4 max-w-sm">
             <div className="flex justify-between items-center mb-1.5">
-              <span className="text-xs font-medium text-neutral-500">
-                Running 4 Gemini models... this takes ~45s
+              <span className="text-xs font-medium text-neutral-500 transition-opacity duration-300">
+                {progressStage(progress)}
               </span>
-              <span className="text-xs font-medium text-neutral-500">
+              <span className="text-xs font-medium text-neutral-500 tabular-nums">
                 {Math.round(progress)}%
               </span>
             </div>

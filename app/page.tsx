@@ -26,7 +26,7 @@ function Header() {
         <p className="font-mono text-xs uppercase tracking-widest text-accent">Vairal</p>
         <h1 className="mt-3 text-5xl font-semibold tracking-tight">Founder channel engine</h1>
         <p className="mt-3 text-lg text-neutral-600 max-w-2xl">
-          Pick an underdog brand. Vairal pulls how AI engines talk about it (via Peec AI), then ships a week of UGC video production: long-form for citation, shorts for reach, channel pitches for compounding.
+          Pick an underdog brand. Vairal reads how AI search is talking about it right now, then drafts the week of content that earns more of those mentions.
         </p>
       </div>
     </header>
@@ -65,7 +65,7 @@ export default async function Home() {
       {!slate ? (
         <div className="mt-12 rounded-xl border border-neutral-200 p-8">
           <p className="text-neutral-600">
-            No slate yet. Pick a brand above, or run <code className="px-2 py-1 bg-neutral-100 rounded font-mono">npm run slate</code> in the terminal.
+            Pick a brand above and Vairal will draft a week of content in about a minute. (Or run <code className="px-2 py-1 bg-neutral-100 rounded font-mono">npm run slate</code> from the terminal.)
           </p>
         </div>
       ) : (
@@ -155,8 +155,8 @@ export default async function Home() {
           )}
 
           <footer className="mt-20 pt-8 border-t border-neutral-100 flex justify-between items-center text-[10px] text-neutral-400 font-mono uppercase tracking-[0.2em]">
-            <span>Total Production: {plan!.items.length} Clips / Week</span>
-            <span>Plan Generated: {new Date(plan!.generated_at).toLocaleString()}</span>
+            <span>{plan!.items.length} clips queued this week</span>
+            <span>drafted {new Date(plan!.generated_at).toLocaleString()}</span>
           </footer>
         </>
       )}
