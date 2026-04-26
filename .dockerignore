@@ -1,0 +1,31 @@
+# Build artifacts — recreated inside the container
+node_modules
+.next
+tsconfig.tsbuildinfo
+
+# Secrets — never copy into the image. Cloud Run injects these via Secret Manager.
+.env
+.env.local
+.env.*.local
+
+# Local-only state
+.git
+.gitignore
+.entire
+.claude
+.vscode
+.idea
+
+# Docs and dev tooling — not needed at runtime
+*.md
+docs
+scripts
+scratch.ts
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Test/log files (none today, but be safe)
+*.log
+coverage

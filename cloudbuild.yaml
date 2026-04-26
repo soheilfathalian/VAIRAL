@@ -1,0 +1,58 @@
+# Cloud Build pipeline: build + push image, then deploy to Cloud Run.
+# Wire this to a GitHub trigger so every push to main redeploys.
+#
+# Substitutions you need to set when creating the trigger (or pass via --substitutions):
+#   _REGION       e.g. europe-west1
+#   _REPO         Artifact Registry repo name, e.g. vairal
+#   _SERVICE      Cloud Run service name, e.g. vairal
+#
+# Secrets PEEC_API_KEY, GEMINI_API_KEY, TAVILY_API_KEY must already exist in
+# Secret Manager and the Cloud Build service account must have
+# `roles/secretmanager.secretAccessor`.
+
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:$SHORT_SHA
+      - --tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:latest
+      - .
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:$SHORT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=3000
+      - --memory=1Gi
+      - --cpu=1
+      - --timeout=180
+      - --min-instances=1
+      - --max-instances=1
+      - --set-secrets=PEEC_API_KEY=PEEC_API_KEY:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest,TAVILY_API_KEY=TAVILY_API_KEY:latest
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:$SHORT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _REGION: europe-west1
+  _REPO: vairal
+  _SERVICE: vairal
