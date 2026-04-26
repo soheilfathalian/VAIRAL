@@ -24,6 +24,42 @@
   "session_metrics": {
     "turn_count": 7
   },
+  "summary": {
+    "intent": "Verify the app is running and up-to-date from git, locate Aikido and Entire session reports, then generate a comprehensive in-repo audit report with a fresh security scan.",
+    "outcome": "App confirmed live on localhost:3000, git fully synced with origin/main, fresh Aikido scan run across all 29 source files (zero issues found), and a structured audit report written and pushed to docs/reports/audit-2026-04-26.md with an Entire checkpoint trailer on the commit.",
+    "learnings": {
+      "repo": [
+        "Aikido MCP is stateless — scans return inline JSON and are not persisted to local disk; results are associated with the repo on the Aikido dashboard via repository_name parameter.",
+        "Entire stores session data in .entire/ (gitignored locally) and pushes checkpoints to the entire/checkpoints/v1 git branch on GitHub; commit trailers (Entire-Checkpoint: <hash>) link commits to sessions.",
+        "The app has 29 source files across lib/pipeline/ and other directories; Gemini chain runs 5 pipeline tracks sequentially (insight, shorts, pitches, remixes, qna_clusters, low_sentiment_shorts).",
+        "A parallel branch origin/post_prompt exists from team work but does not affect main.",
+        "A historical .env.example leak incident was noted and is referenced in the audit report security history section."
+      ],
+      "code": [
+        {
+          "path": "docs/reports/audit-2026-04-26.md",
+          "finding": "Newly created audit report covering Aikido scan (29 files, 9 risk vectors, 0 issues), pre-commit hook (7 secret patterns blocked), Entire session capture layout, and 5 prioritized recommendations."
+        }
+      ],
+      "workflow": [
+        "Entire checkpoint trailers are automatically appended to commits, making sessions browseable from PR descriptions without any manual linking.",
+        "Aikido IDE-token MCP scans may not auto-create repository entries in the dashboard — a GitHub App integration is needed for persistent scan history beyond the inline response.",
+        "Report artifacts committed to docs/reports/ provide a shareable, login-free reference that complements external dashboards (Aikido, entire.io).",
+        "The entire explain --commit <hash> --generate CLI command can AI-summarize the session that produced any given commit."
+      ]
+    },
+    "friction": [
+      "Aikido and Entire reports are not surfaced on local disk by default, requiring the user to ask multiple times and clarify locations before understanding where to find them.",
+      "Aikido IDE-token scans may be ephemeral (no persistent repo entry in dashboard) unless GitHub App is configured, creating ambiguity about whether scan results are durable.",
+      "A parallel commit (ff2c231 from origin/fixes) landed during the push and required a rebase before the audit commit could be pushed."
+    ],
+    "open_items": [
+      "Consider running entire explain --commit e0e58bf --generate to AI-summarize the audit session and append it as an appendix to the audit report.",
+      "Evaluate connecting Aikido via GitHub App integration for persistent scan history instead of relying on ephemeral IDE-token MCP scans.",
+      "Investigate origin/post_prompt branch — parallel team work that has not been reviewed or merged.",
+      "The 5 ongoing-protection recommendations in §4 of the audit report are prioritized but not yet actioned."
+    ]
+  },
   "initial_attribution": {
     "calculated_at": "2026-04-26T10:41:33.936191Z",
     "agent_lines": 191,
