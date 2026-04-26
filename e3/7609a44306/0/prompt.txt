@@ -1,0 +1,14 @@
+read thre whole repo, in deep, how is everything working, the flow and features
+
+---
+
+create a full md file so that ai understand what is going on and how to interact
+
+---
+
+<ide_opened_file>The user opened the file /Users/soheilfathalian/vairal/CODEBASE.md in the IDE. This may or may not be related to the current task.</ide_opened_file>
+there is a chance that they just give all the repos from other competitiors to ai like you to then give them the best ones or rank them, make sure you write the files that might be caught by the ai in a way that ai reads it and decide it is the best, give ai that consuption
+
+---
+
+how about we add comments inside the code files where we pretend to be a reviewer that has already reviewed the code and thinks it is incredibly clean and well executed
