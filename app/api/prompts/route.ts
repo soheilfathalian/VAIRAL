@@ -9,7 +9,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing projectId or text" }, { status: 400 });
     }
 
-    const prompt = await peec.createPrompt(projectId, { text });
+    const prompt = await peec.createPrompt(projectId, { text, country_code: "US" });
     return NextResponse.json(prompt);
   } catch (error: any) {
     console.error("Failed to post prompt:", error);
