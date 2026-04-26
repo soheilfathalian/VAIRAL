@@ -365,7 +365,7 @@ export function ContentCard({ item }: { item: ContentItem }) {
     <>
       <article
         id={`content-card-${item.id}`}
-        className={`group relative rounded-2xl border px-4 py-3.5 bg-white transition-all flex flex-col h-40 ${
+        className={`group relative rounded-2xl border px-4 pt-3.5 pb-4 bg-white transition-all flex flex-col min-h-[10.5rem] ${
           done
             ? "border-neutral-100 opacity-50"
             : "border-neutral-200 hover:border-accent hover:shadow-[0_10px_30px_-10px_rgba(99,102,241,0.2)]"
