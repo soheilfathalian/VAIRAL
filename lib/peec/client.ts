@@ -45,6 +45,8 @@ export const peec = {
     request<{ data: Model[] }>("/models", { query: { project_id: projectId } }).then((r) => r.data),
   listPrompts: (projectId: string, opts: { limit?: number; offset?: number; topic_id?: string; tag_id?: string } = {}) =>
     list<Prompt>("/prompts", { project_id: projectId, ...opts }),
+  createPrompt: (projectId: string, body: { text: string; topic_id?: string; tag_id?: string }) =>
+    request<Prompt>("/prompts", { method: "POST", query: { project_id: projectId }, body }),
   listChats: (projectId: string, range: { start_date: string; end_date: string; limit?: number; offset?: number; prompt_id?: string; model_id?: string }) =>
     list<ChatSummary>("/chats", { project_id: projectId, ...range }),
   getChat: (projectId: string, chatId: string) =>

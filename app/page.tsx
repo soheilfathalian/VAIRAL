@@ -101,7 +101,7 @@ export default async function Home() {
 
                   <div className="space-y-4">
                     {dayPlan.items.map((item) => (
-                      <ContentCard key={item.id} item={item} />
+                      <ContentCard key={item.id} item={item} projectId={slate.project_id} />
                     ))}
                   </div>
                 </section>

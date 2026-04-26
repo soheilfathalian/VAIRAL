@@ -337,7 +337,7 @@ export function ContentDetailModal({ item, onClose }: { item: ContentItem; onClo
 }
 
 // ── ContentCard ───────────────────────────────────────────────────────────────
-export function ContentCard({ item }: { item: ContentItem }) {
+export function ContentCard({ item, projectId }: { item: ContentItem; projectId: string }) {
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -347,11 +347,27 @@ export function ContentCard({ item }: { item: ContentItem }) {
     if (stored === "1") setDone(true);
   }, [item.id]);
 
-  const toggleDone = (e: React.MouseEvent) => {
+  const toggleDone = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const next = !done;
     setDone(next);
     localStorage.setItem(`done:${item.id}`, next ? "1" : "0");
+
+    // Post prompt to capture the impact of the video over the next month
+    if (next) {
+      try {
+        await fetch("/api/prompts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId,
+            text: `What is the latest on ${item.metadata.topic}? Is it true that ${item.hook}?`,
+          }),
+        });
+      } catch (err) {
+        console.error("Failed to post prompt", err);
+      }
+    }
   };
 
   const typeColors: Record<ContentItem["type"], string> = {
